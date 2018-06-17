@@ -18,8 +18,8 @@ do
 	esac
 case "$Mode" in
                 Flowering)
-                LightOn="08"
-                LightOff="20"
+                LightOn="07"
+                LightOff="19"
                 ;;
                 Vegetative)
                 LightOn="06"
@@ -31,16 +31,12 @@ Level="0"
 date=$(date +%T)
 LastFlood=$(echo "SELECT LastFlood FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 NextFlood=$(echo "SELECT NextFlood FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
-if [[ $NextFlood = "00:00:00" ]] 
+if [[ $NextFlood = "0000-00-00 00:00:00" ]] 
 then
 	LastFlood=$(date  "+%T")
 	NextFlood=$(date  "+%T")
 fi
-#if [[ $NextFlood -gt $(date  "+%T" -d $period" hours") ]]
-#then
-#	echo "It's been a long time baby ...."
-#	NextFlood
-#fi
+
 gpio -g mode 14 out
 gpio -g mode 15 out
 gpio -g mode 18 out
@@ -70,17 +66,14 @@ LigthStatus=$(gpio -g read 18)
 		TDS=$(echo "select TDS from H2O ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 		Salt=$(echo "select Salt from H2O ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 		SG=$(echo "select SG from H2O ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
-		Tsens2=$(echo "select Temp from H2O ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
-		Tsens1=$(echo "select LampTemp from farmdata ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
+		Tsens1=$(echo "select Temp from H2O ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
+		Tsens2=$(echo "select LampTemp from farmdata ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 		Tsens3=$(echo "select SoilTemp from farmdata ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 		Level=$(echo "select Level from farmdata ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N)
 	fi
         AirStatus=$(gpio -g read 14)
         PumpStatus=$(gpio -g read 15)
         LigthStatus=$(gpio -g read 18)
-#	BedHighLevel=$(gpio -g read 23)
-#        BedMidLevel=$(gpio -g read 24)
-#        BedLowLevel=$(gpio -g read 25)
         Drain=$(/var/www/hall.py )
 	ExhaustFan=$(gpio -g read 8)
 	if [ $AirStatus -eq "0" ]
@@ -106,30 +99,6 @@ LigthStatus=$(gpio -g read 18)
         then
                 LigthStatusTxt="On "
         fi
-
-#	if [ $BedHighLevel -eq "0" ]
-#        then
-#                BedHighLevelTxt="Low"
-#        elif [ $BedHighLevel -eq "1"  ]
-#        then
-#                BedHighLevelTxt="High"
-#        fi
-        
-#        if [ $BedMidLevel -eq "0" ]
-#        then
-#                BedMidLevelTxt="Low"
-#        elif [ $BedMidLevel -eq "1"  ]
-#        then
-#                BedMidLevelTxt="High"
-#        fi
-        
-#	if [ $BedLowLevel -eq "1" ]
-#        then
-#                BedLowLevelTxt="Low"
-#        elif [ $BedLowLevel -eq "0"  ]
-#        then 
-#                BedLowLevelTxt="High"
-#        fi
 	if [ $Drain -eq "0" ]
 	then
 		Drain="Off"
@@ -142,18 +111,14 @@ LigthStatus=$(gpio -g read 18)
        else
                  ExFan="On "
         fi
-#	line=$(echo "'"$(date +%F-%H:%M:%S)"','"$LigthStatusTxt"','"$ExFan"','"$AirStatusTxt"','"$PumpStatusTxt"','"$Drain"','"$BedHighLevelTxt"','"$BedMidLevelTxt"','"$BedLowLevelTxt"','"$Level"','"$Mode"','"$Tsens2"','"$Tsens1"'")
-	line=$(echo "'"$(date +%F-%H:%M:%S)"','"$LigthStatusTxt"','"$ExFan"','"$AirStatusTxt"','"$PumpStatusTxt"','"$Drain"','"$Level"','"$Mode"','"$Tsens2"','"$Tsens1"'")
-#        line2=$(echo "'"$(date +%F-%H:%M:%S)"','"$LastFlood"','"$NextFlood"','"$period"','"$LastpHCal"','"$NextpHCal"','"$Vol"'")
+	line=$(echo "'"$(date +%F-%H:%M:%S)"','"$LigthStatusTxt"','"$ExFan"','"$AirStatusTxt"','"$PumpStatusTxt"','"$Drain"','"$Level"','"$Mode"','"$Tsens1"','"$Tsens2"'")
 	echo "INSERT INTO farmdata (date,lights,ExFan,AirPump,WaterPump,Drain,Level,mode,LampTemp,SoilTemp) VALUES ("$line ");" | mysql -upi -pa-51d41e Farm -N
-#        echo "INSERT INTO farmSched (date,LastFlood,NextFlood,period,LastpHCal,NextpHCal,Vol) VALUES ("$line2 ");" | mysql -upi -pa-51d41e Farm -N
 	echo "COMMIT;" | mysql -upi -pa-51d41e Farm -N
 	Level=$(echo "SELECT Level FROM farmdata ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N )
-	
-	echo -e ' \t ' > ./ScreenFile
-        echo  -e "GrowBot6" >> ./ScreenFile
-        date +%T >> ./ScreenFile
-        echo  -e "An Evil Scientist SINdicate production" >> ./ScreenFile
+	#echo  -e "" >> ./ScreenFile
+	echo $(date +"%Y-%m-%d %T") > ./ScreenFile
+	echo  -e "GrowBot6" >> ./ScreenFile
+	echo  -e "An Evil Scientist SINdicate production" >> ./ScreenFile
         echo  -e "" >> ./ScreenFile
 	echo  -e "Mode:" $Mode "\t LightOn:"$LightOn":00    LightOff: "$LightOff":00" >> ./ScreenFile
         echo  -e "Light Status       :\t" $LigthStatusTxt >> ./ScreenFile
@@ -162,9 +127,6 @@ LigthStatus=$(gpio -g read 18)
 	echo  -e "Pump Status        :\t" $PumpStatusTxt "\t Period: " $period"Min" $(gpio -g read 17)/$(gpio -g read 27) "En/Bed" >> ./ScreenFile
 	echo  -e "Drain              :\t" $Drain "\t Last flood: " $LastFlood >> ./ScreenFile
 	echo  -e "\t\t\t\t Next flood: " $NextFlood >> ./ScreenFile
-#	echo  -e "\t\t\t\t High level: " $BedHighLevelTxt >> ./ScreenFile
-#        echo  -e "\t\t\t\t Mid  level: " $BedMidLevelTxt >> ./ScreenFile
-#        echo  -e "\t\t\t\t Low  level: " $BedLowLevelTxt >> ./ScreenFile
 	echo  -e "\t\t\t\t level: " $Level >> ./ScreenFile
         echo  -e "" >> ./ScreenFile
         echo  -e "pH              : " $pH "\t Delta" $(echo "scale=3; "$pH "- 5.8" | bc | sed -r 's/^(-?)\./\10./') "[5.6/5.8/6.0]" >> ./ScreenFile
@@ -173,14 +135,13 @@ LigthStatus=$(gpio -g read 18)
         echo  -e "Salinity        : " $Salt >> ./ScreenFile
         echo  -e "Specific Gravity: " $SG >> ./ScreenFile
 	echo  -e "" >> ./ScreenFile
-	echo  -e "Temp Lamp       : " $Tsens2 >> ./ScreenFile
-        echo  -e "Temp Mid Room   : " $Tsens1 >> ./ScreenFile
+	echo  -e "Temp Lamp       : " $Tsens1 >> ./ScreenFile
+        echo  -e "Temp Mid Room   : " $Tsens2 >> ./ScreenFile
         echo  -e "Temp Tank       : " $Tsens3 >> ./ScreenFile
 	echo  -e "" >> ./ScreenFile
 	echo  -e "select date, mode, lights, ExFan, AirPump, WaterPump, Drain, Level, LampTemp, SoilTemp from farmdata ORDER BY date DESC LIMIT 7 " | mysql -upi -pa-51d41e -t Farm >> ./ScreenFile
 	echo  -e "select * from farmSched ORDER BY date DESC LIMIT 7 " | mysql -upi -pa-51d41e -t Farm > ./Screen2File
 	echo  -e "select * from H2O order by date desc limit 7;" | mysql -t -upi -pa-51d41e Farm >> ./Screen2File
-#	"\t\t\t"
 	sed -e 's/^/                              /' ./Screen2File >> ./ScreenFile && rm -f ./Screen2File
 	clear
  	cat ./ScreenFile
@@ -198,7 +159,7 @@ ReadSensor()
         Salt=$(echo $ECs | awk -F " " '{print $3 }')
         SG=$(echo $ECs | awk -F " " '{print $4 }')
         Tsens2=$(echo "scale=3;$(for Tsens in $(ls -d /sys/bus/w1/devices/28-*); do cat $Tsens/w1_slave | tail -n 1 | awk -F"=" '{ print $2}'; done | head -n 1)/1000" |bc )
-        Tsens1=$(echo "scale=3;$(for Tsens in $(ls -d /sys/bus/w1/devices/28-*); do cat $Tsens/w1_slave | tail -n 1 | awk -F"=" '{ print $2}'; done | tail -n 2 | head -n 1)/1000 - 32" |bc)
+        Tsens1=$(echo "scale=3;$(for Tsens in $(ls -d /sys/bus/w1/devices/28-*); do cat $Tsens/w1_slave | tail -n 1 | awk -F"=" '{ print $2}'; done | tail -n 2 | head -n 1)/1000" |bc)
         Tsens3=$(echo "scale=3;$(for Tsens in $(ls -d /sys/bus/w1/devices/28-*); do cat $Tsens/w1_slave | tail -n 1 | awk -F"=" '{ print $2}'; done | tail -n 1)/1000" |bc)
         line=$(echo "'"$(date +%F-%H:%M:%S)"','"$Tsens3"','"$pH"','"$EC"','"$TDS"','"$Salt"','"$SG"'")
         echo "INSERT INTO H2O (date,Temp,pH,EV,TDS,Salt,SG) VALUES ("$line ");" | mysql -upi -pa-51d41e Farm -N
@@ -241,18 +202,17 @@ Lights()
 ###############################################################################
 Water()
 	{
-
-        now=$(date +"%D %T")
-        if [[ $now > $NextFlood ]] || [[ $ForceFlood -eq "1" ]] || [[ $NextFlood = "00:00:00" ]]
+        now=$(date +"%Y-%m-%d %T")
+	NextFlood=$(echo "SELECT NextFlood FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N )
+	if [[ $now > $NextFlood ]] || [[ $ForceFlood -eq "1" ]] || [[ $NextFlood = "00:00:00" ]]
         then
-                FillStart=$(date +"%D %T")
-                while [ $(/var/www/hall.py) -eq 0 ]
+		in3=$(date +%T -d "+4minutes")
+		while [[ $(date +%T) < $in3 ]] # || [[ $(/var/www/hall.py) -eq 0 ]]
                 do
                         if [ $(gpio -g read 15) -eq 0 ]
                         then
                                 gpio -g write 15 1
                         fi
-                        now=$(date +"%D %T")
                         hall=$(/var/www/hall.py)
 			Level=$(echo $Level + 8.7 | bc )
 			ReadSensor
@@ -260,15 +220,14 @@ Water()
                         Aerate
                         ShellScreen $Mode $period $LastFlood $NextFlood
                 done
-                FillStop=$(date +"%D %T")
-                DrainStart=$(date +"%D %T")
-                while [ $(/var/www/hall.py) -eq 1 ]
+		echo $Level
+		while [[ $Level -gt "0" ]]
+                #while [[ $(/var/www/hall.py) -eq 1 ]]
 		do
                         if [ $(gpio -g read 15) -eq 1 ]
                         then
                                 gpio -g write 15 0
                         fi
-                        now=$(date +"%D %T")
                         hall=$(/var/www/hall.py)
 			Level=$(echo $Level - 8.7 | bc )
 			ReadSensor
@@ -276,15 +235,20 @@ Water()
                         Aerate
                         ShellScreen $Mode $period $LastFlood $NextFlood
                 done
+		Level="0"
+		gpio -g write 15 0
 		ForceFlood="0"
         	DrainStop=$(date +"%D %T")
-                LastFlood=$DrainStop
-                NextFlood=$(date "+%D %T" --date='+'$period' minutes')
+        	LastFlood=$(date +"%Y-%m-%d %T")
+                NextFlood=$(date +"%Y-%m-%d %T" --date='+'$period' minutes')
 		LastpHCal=$(echo "SELECT LastpHCal FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N )
 		NextpHCal=$(echo "SELECT NextpHCal FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N )
 		Vol=$(echo "SELECT Vol FROM farmSched ORDER BY date DESC LIMIT 1;" | mysql -upi -pa-51d41e Farm -N )
         	line=$(echo "'"$(date +%F-%H:%M:%S)"','"$LastFlood"','"$NextFlood"','"$period"','"$LastpHCal"','"$NextpHCal"','"$Vol"'")
-	        echo "INSERT INTO farmSched (date,LastFlood,NextFlood,period,LastpHCal,NextpHCal,Vol) VALUES ("$line ");" | mysql -upi -pa-51d41e Farm -N
+		if [[ $"NextFlood" != "0000-00-00 00:00:00" && "$LastFlood" != "0000-00-00 00:00:00" ]]
+		then
+		        echo "INSERT INTO farmSched (date,LastFlood,NextFlood,period,LastpHCal,NextpHCal,Vol) VALUES ("$line ");" | mysql -upi -pa-51d41e Farm -N
+		fi
 	fi
 	}
 ################################################################################
@@ -303,8 +267,6 @@ Aerate()
         min=$(date +%M)
         if [ $((10#${min}%2)) -eq 0 ]
         then
-#               gpio -g write 17 0
-#		gpio -g write 15 1
 		gpio -g write 14 1
         else
                 gpio -g write 14 0
@@ -318,11 +280,11 @@ Aerate()
         AirOut="56"
 	ExFanStat=$(gpio -g read 8)
 	#RoomTemp=$(for Tsens in $(ls -d /sys/bus/w1/devices/28-*); do echo 'scale=3;'$(cat $Tsens/w1_slave | tail -n 1 | awk -F"=" '{ print $2}') ' / 1000' | bc; done | head -n 1)
-	if [[ $Tsens1 > 28.3 ]]
+	if [[ $Tsens2 > 26.9 ]]
 	then
                 gpio -g write 8 1
 
-	elif [[ $ExFanStat = 1 ]] && [[ $RoomTemp < 28.5 ]]
+	elif [[ $ExFanStat = 1 ]] && [[ $RoomTemp < 26.6 ]]
         then
 	        gpio -g write 8 0
 #	else
