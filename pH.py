@@ -52,7 +52,7 @@ class atlas_i2c:
         	self.file_write.close()
 try:
         pHSens = atlas_i2c()
-        pH = round(float(pHSens.query('R')), 3)
+        pH = round(float(pHSens.query('R')), 4)
 	print pH
 except ValueError: 
 #	print "ValueError"

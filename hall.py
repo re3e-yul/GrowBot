@@ -28,22 +28,15 @@ def sensorCallback(channel):
  	stat = 0
   else:
 	stat = 1
-#  except:
-#	stat = 1 
-		
-#  except:
-#		print "V"  
-#  pass
+
 	
 def main():
   
-  # Wrap main content in a try block so we can
-  # catch the user pressing CTRL-C and run the
-  # GPIO cleanup function. This will also prevent
-  # the user seeing lots of unnecessary error
-  # messages.
-#  global stat
-#  stat = 0
+  GPIO.setmode(GPIO.BCM)
+  GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)
+  GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)
+
+  # catch the user pressing CTRL-C
   try:
     # Loop until users quits with CTRL-C
     #while True :
@@ -59,9 +52,6 @@ def main():
   except:
     print 0
 # Tell GPIO library to use GPIO references
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)
 
 if __name__=="__main__":
    timeout = time.time() + 5
