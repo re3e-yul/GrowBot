@@ -1,0 +1,32 @@
+#! /bin/bash
+
+gpio -g mode 26 out
+gpio -g mode 20 out
+main=$(gpio -g read 26)
+light=$(gpio -g read 21)
+pump=$(gpio -g read 12)
+fan=$(gpio -g read 16)
+bubl=$(gpio -g read 20)
+if [[ $bubl -eq 0 ]]
+then
+	if [[ $main -eq 0 ]]
+	then
+        	gpio -g write 26 1
+	fi
+	gpio -g write 20 1
+elif [[ $bubl -eq 1 ]]
+then
+	gpio -g write 20 0
+        if [[ $light -eq 0 && $pump -eq 0 && $fan -eq 0 ]]
+        then
+                gpio -g write 26 0
+        fi
+fi
+sleep 0.5
+main=$(gpio -g read 26)
+light=$(gpio -g read 21)
+pump=$(gpio -g read 12)
+fan=$(gpio -g read 16)
+bubl=$(gpio -g read 20)
+echo -e "Main AC relay: " $main
+echo -e "Bublr AC relay: "$bubl
