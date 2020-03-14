@@ -232,7 +232,21 @@ def Flood(date,WaterPump,period,LastFlood, NextFlood):
                 PStatus = "On"
         else:
                 PStatus = "Off"
-	return now,PStatus,period, LastFlood, NextFlood
+
+	Farm = mysql.connector.connect(
+        	host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+                )
+        global mycursor
+        sql = "INSERT INTO Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s)"
+        val = (now,mode,period,LastFlood,NextFlood)
+        mycursor.execute(sql, val)
+        mydb.commit()
+        print(mycursor.rowcount, "record inserted.")
+	PStatus = GPIO.input(12)
+	return now, PStatus, period, LastFlood, NextFlood
 
 def Display(mainreturn):
 	now = mainreturn[0]
@@ -280,11 +294,41 @@ class BackgroundSensors(threading.Thread):
 def ReadSensors():
 		global EC
 		global pH
+		now = strftime("%H:%M:%S")
 		pH = Atlas(99,"i")
 		while True:
 			pH = Atlas(99,"r")
 			EC = Atlas(100, 'R')
+			Ec = EC[0]
+                	TDS = EC[1]
+                	S = EC[2]
+                	SG = EC[3]
+
+			Farm = mysql.connector.connect(
+                		host="localhost",
+                		user="pi",
+                		passwd="a-51d41e",
+                		database="Farm"
+        		)
+        		global mycursor
+			sql = "INSERT INTO H2O (date,pH,EC,TDS,S,SG) VALUES (%s, %s)"
+			val = (now,pH,Ec,TDS,S,SG)
+			mycursor.execute(sql, val)
+			mydb.commit()
+			print(mycursor.rowcount, "record inserted.")
+			print now,pH,Ec,TDS,S,SG
+			time.sleep(5)			
 		return pH, EC
+
+
+
+
+
+
+
+
+
+
 
 def main(initreturn):
 	try:
@@ -326,6 +370,7 @@ def main(initreturn):
 		sys.exit(0)
 	finally:
 		#		print now, mode, DayStart, DayEnd, LStatus, PStatus,LastFlood, NextFlood, period
+		PStatus = GPIO.input(12)
 		return now, mode, DayStart, DayEnd, LStatus, PStatus, LastFlood, NextFlood, period
 
 
@@ -339,4 +384,4 @@ if __name__ == "__main__":
 		os.system('clear')
 		mainreturn = main(initreturn)
 		Display(mainreturn)
-		time.sleep(0.5)
+		time.sleep(0.7)
