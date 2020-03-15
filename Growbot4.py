@@ -23,6 +23,10 @@ def init():
         GPIO.setup(26, GPIO.OUT)							#, initial=GPIO.LOW) # AC Main
         GPIO.setup(21, GPIO.OUT) 							#, initial=GPIO.LOW) # AC Lighs
         GPIO.setup(12, GPIO.OUT) 							#, initial=GPIO.LOW) # AC WaterPump
+        GPIO.setup(16, GPIO.OUT)                                                        #, initial=GPIO.LOW) # AC Fan
+        GPIO.setup(20, GPIO.OUT)                                                        #, initial=GPIO.LOW) # AC Air pump
+        GPIO.setup(5, GPIO.OUT)                                                        #, initial=GPIO.LOW) #  DC 3 way valve on/off
+        GPIO.setup(6, GPIO.OUT)                                                        #, initial=GPIO.LOW) #  DC 3 way valve direction
   	GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  				#, initiate Hall sensor
   	GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)   #, on Hall call function
 #	AtlasDetect()
@@ -191,12 +195,62 @@ def ReadSensors():
 			val = (now,pH,Ec,TDS,S,SG)
 			H2O.execute(sql, val)
 			Farm.commit()
-#			print(H2O.rowcount, "record inserted.")
 			H2O.close
-#			print now,pH,Ec,TDS,S,SG
-			time.sleep(5)			
-#		print now,pH,Ec,TDS,S,SG
-		return now,pH,Ec,TDS,S,SG
+			Mstatus = GPIO.input(26) #main
+			Lstatus = GPIO.input(21) #Lights
+			Pstatus = GPIO.input(12) #water pump
+			Fstatus = GPIO.input(16) #Fan
+			Bstatus = GPIO.input(20) #air pump 
+			Valve = GPIO.input(5)    #valve on/off
+			Valved = GPIO.input(6) 	 #valve dir 
+			
+			if Mstatus:
+                		Mstatus = "On"
+        		else:
+                		Pstatus = "Off"
+
+                        if Lstatus:
+                                Lstatus = "On"
+                        else:
+                                Lstatus = "Off"
+
+                        if Pstatus:
+                                Pstatus = "On"
+                        else:
+                                Pstatus = "Off"
+
+                        if Fstatus:
+                                Fstatus = "On"
+                        else:
+                                Fstatus = "Off"
+
+                        if Bstatus:
+                                Bstatus = "On"
+                        else:
+                                Bstatus = "Off"
+
+			if Valve:
+				Valve = "Off"
+			else:
+				Valve = "On"
+
+                        if Valved:
+                                Valved = "Feed"
+                        else:
+                                Valved = "Circ"
+			Farm = mysql.connector.connect(
+                                host="localhost",
+                                user="pi",
+                                passwd="a-51d41e",
+                                database="Farm"
+                        )
+			ACT = Farm.cursor()
+			sql = "INSERT INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+			val = (now,Mstatus,Lstatus,Pstatus,Fstatus,Bstatus,Valve,Valved)
+			ACT.execute(sql, val)
+			Farm.commit()
+			ACT.close
+#		return now,pH,Ec,TDS,S,SG
 
 
 
