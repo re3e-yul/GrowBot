@@ -1,2 +1,0 @@
-sudo i2cdetect -y 0 (if you are using a version 1 Raspberry Pi)
-sudo i2cdetect -y 1 (if you are using a version 2 Raspberry Pi)        

@@ -167,7 +167,7 @@ def ReadSensors():
 		while True:
 			now = datetime.now()
 			now = now.strftime("%Y-%m-%d %H:%M:%S")
-			pH = Atlas(99,"r")
+			pH = Atlas(99,"R")
 	        	ECs = Atlas(100,"r")
 			ECs.split(',')
 			Ec,TDS,S,SG = ECs.split(',')
@@ -256,7 +256,7 @@ def dbShedRead():
         except TypeError:
                 print "no entry yet"
 def Light(mode):
-        now = datetime.datetime.now().strftime("%H:%M:%S")
+        now = datetime.now().strftime("%H:%M:%S")
         if mode == "Vegetative":
                 DayStart = "06:00:00"
                 DayEnd = "22:00:00"
@@ -277,7 +277,7 @@ def Light(mode):
         return now, LStatus, DayStart, DayEnd
 
 def Flood():
-        now = datetime.datetime.now().strftime("%H:%M:%S")
+        now = datetime.now().strftime("%H:%M:%S")
         try:
                 Shed=dbShedRead()
                 date = Shed[0]
@@ -287,7 +287,6 @@ def Flood():
                 NextFlood = Shed[4]
                 NextFlood = str(NextFlood)
                 PStatus = GPIO.input(12)
-                #print  "Now:", now,"NextFlood:", NextFlood
                 if now > NextFlood:
                         GPIO.output(26, GPIO.HIGH)
                         GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
@@ -364,6 +363,7 @@ if __name__ == "__main__":
 	time.sleep(1)
 	while True:
 		os.system('clear')
+
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
@@ -372,26 +372,20 @@ if __name__ == "__main__":
 			TDS = H2O[3]
 			S = H2O[4]
 			SG = H2O[5]
-#			print date, pH, EC, TDS, S, SG
 		except TypeError:
 			print "no entry yet"
 			date = datetime.now()
-			pH = "0"
-			EC = "0"
-			TDS = "0"
-			S = "0"
-			SG = "0"
                 try:
                         Shed=dbShedRead()
-#                       date = Shed[0]
                         mode = Shed[1]
                         period = Shed[2]
                         LastFlood = Shed[3]
                         NextFlood = Shed[4]
-#                       print "date:", date, "mode:",  mode, "period:", period, "LastFlood:", LastFlood, "NextFlood:", NextFlood
                 except TypeError:
                         print "no entry yet"
                         mode = "Vegetative"
+	        Light(mode)
+                Flood()
                 Pstatus = GPIO.input(12)
                 if Pstatus:
                         PStatus = "On"
@@ -402,11 +396,13 @@ if __name__ == "__main__":
                         LStatus = "On"
                 else:
                         LStatus = "Off"
-		print datetime.now().strftime("%H:%M:%S") 
-                print "Lamp Status: ", LStatus
-		print "Pump Status: ", PStatus, "NextFlood:", NextFlood
-                print "H2O:", "pH:", "pH", pH, "EC", EC, "TDS", TDS, "S", S, "SG", SG
-
+		try:
+	#		print datetime.now().strftime("%H:%M:%S") 
+        	        print "Lamp Status: ", LStatus
+			print "Pump Status: ", PStatus, "NextFlood:", NextFlood
+                	print "H2O:", "pH:", "pH", pH, "EC", EC, "TDS", TDS, "S", S, "SG", SG
+		except NameError:
+			NextFlood = "No entry yet"
 
 		time.sleep(2)
 
