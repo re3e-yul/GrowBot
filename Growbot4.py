@@ -480,6 +480,7 @@ def display():
         	print "RE3e presents"
        		print "An Evil Scientist SINdicate production"
 	        print "GrowBot V. (The return of Growbot)"
+		print ""
 		print "Light Status:\t",lights 
 	        print "Pump Status:\t", WaterPump, "\t\t\tPeriod:", period
         	print "ExFan Status:\t", ExFan
@@ -492,7 +493,12 @@ def display():
 		print "\t\t\tTDS:",TDS
 		print "\t\t\tSalinity:",S
 		print "\t\t\tSpecfc Grav:",SG
-
+		print ""
+		os.system('echo "select * from farmdata order by date desc limit 5;" | mysql -upi -pa-51d41e -t Farm')
+		print ""
+		os.system('echo "select * from Shed order by date desc limit 5;" | mysql -upi -pa-51d41e -t Farm')
+		print ""
+		os.system('echo "select * from H2O order by date desc limit 5;" | mysql -upi -pa-51d41e -t Farm')
 if __name__ == "__main__":
 	global h2owcursor
 	thread = BackChemSensors(ReadSensors)
