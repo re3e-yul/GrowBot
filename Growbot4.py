@@ -309,6 +309,39 @@ def dbShedRead():
                 return date, mode, period, LastFlood, NextFlood
         except TypeError:
                 print "no entry yet"
+
+def dbdataRead():
+        Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+        #global mycursor
+        DataCursor = Farm.cursor()
+        DataCursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
+        myresult = DataCursor.fetchone()
+        DataCursor.close
+# select * from Farm.farmdata order by date asc limit 1;
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+#| date                | main | lights | ExFan | AirPump | WaterPump | Valve  | ValveD |
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+#| 2020-03-15 16:24:48 | 1    | 1      | 0     | 0       | 0         | 1    | 0    |
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+        try:
+                date = myresult[0]
+                main = myresult[1]
+                lights = myresult[2]
+                ExFan = myresult[3]
+                AirPump = myresult[4]
+		WaterPump = myresult[5]
+		Valve = myresult[6]
+		ValveD = myresult[7]
+                return date, main, lights, ExFan, AirPump, WaterPump, Valve, ValveD
+        except TypeError:
+                print "no entry yet"
+
+
 def Light(mode):
         now = datetime.now().strftime("%H:%M:%S")
         if mode == "Vegetative":
@@ -408,27 +441,19 @@ def sensorCallback(channel):
                 Farm.commit()
                 time.sleep(90)
 
-
-if __name__ == "__main__":
-	global h2owcursor
-	thread = BackChemSensors(ReadSensors)
-	thread.start()
-	initreturn = init()
-	time.sleep(1)
-	while True:
+def display():
 		os.system('clear')
-
-		try:
-			H2O=dbH2ORead()
-			date = H2O[0]
-			pH = H2O[1]
-			EC = H2O[2]
-			TDS = H2O[3]
-			S = H2O[4]
-			SG = H2O[5]
-		except TypeError:
-			print "no entry yet"
-			date = datetime.now()
+                try:
+                        H2O=dbH2ORead()
+                        date = H2O[0]
+                        pH = H2O[1]
+                        EC = H2O[2]
+                        TDS = H2O[3]
+                        S = H2O[4]
+                        SG = H2O[5]
+                except TypeError:
+                        print "no entry yet"
+                        date = datetime.now()
                 try:
                         Shed=dbShedRead()
                         mode = Shed[1]
@@ -438,25 +463,51 @@ if __name__ == "__main__":
                 except TypeError:
                         print "no entry yet"
                         mode = "Vegetative"
+		try:
+			farmdata=dbdataRead()
+			date = farmdata[0]
+			main = farmdata[1]
+			lights = farmdata[2]
+			ExFan = farmdata[3]
+			AirPump = farmdata[4]
+			WaterPump = farmdata[5]
+			Valve = farmdata[6]
+			ValveD = farmdata[7]
+		except TypeError:
+                        print "no entry yet"
+                print datetime.now().strftime("%H:%M:%S") 
+      		print ""
+        	print "RE3e presents"
+       		print "An Evil Scientist SINdicate production"
+	        print "GrowBot V. (The return of Growbot)"
+		print "Light Status:\t",lights 
+	        print "Pump Status:\t", WaterPump, "\t\t\tPeriod:", period
+        	print "ExFan Status:\t", ExFan
+		print "AirPump Status:", AirPump
+		print "Valve: ", Valve, "Direction:", ValveD
+		print "Last Flood:", LastFlood, "\t, Next Flood: ", NextFlood
+		print ""
+		print "H2O Chem:"
+		print "pH:",pH,"\t\tEC:" ,EC
+		print "\t\t\tTDS:",TDS
+		print "\t\t\tSalinity:",S
+		print "\t\t\tSpecfc Grav:",SG
+
+if __name__ == "__main__":
+	global h2owcursor
+	thread = BackChemSensors(ReadSensors)
+	thread.start()
+	initreturn = init()
+	time.sleep(1)
+	while True:
+		display()
+                try:
+                        Shed=dbShedRead()
+                        mode = Shed[1]
+		except TypeError:
+                        print "no entry yet"
+                        mode = "Vegetative"
 	        Light(mode)
                 Flood()
-                Pstatus = GPIO.input(12)
-                if Pstatus:
-                        PStatus = "On"
-                else:
-                        PStatus = "Off"
-                Lstatus = GPIO.input(21)
-                if Lstatus:
-                        LStatus = "On"
-                else:
-                        LStatus = "Off"
-		try:
-	#		print datetime.now().strftime("%H:%M:%S") 
-        	        print "Lamp Status: ", LStatus
-			print "Pump Status: ", PStatus, "NextFlood:", NextFlood
-                	print "H2O:", "pH:", "pH", pH, "EC", EC, "TDS", TDS, "S", S, "SG", SG
-		except NameError:
-			NextFlood = "No entry yet"
-
 		time.sleep(2)
 
