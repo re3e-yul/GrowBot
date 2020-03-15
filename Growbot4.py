@@ -3,7 +3,8 @@ import threading
 #from threading import Thread
 import RPi.GPIO as GPIO
 import time
-import datetime
+#import datetime
+from datetime import datetime
 import os
 import sys
 import io # used to create file streams
@@ -14,53 +15,25 @@ import subprocess
 import re
 import mysql.connector
 from time import gmtime, strftime
-
+import datetime
+import time
 def init():
 	os.system('clear')
-	print ""
-	print "RE3e presents"
-	time.sleep(0.8)
-	print "An Evil Scientist SINdicate production"
-	time.sleep(0.8)
-	print "GrowBot V. (The return of Growbot)"
-	time.sleep(1.6)
-	print""
-	print "Setting up GPIO"
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(26, GPIO.OUT)							#, initial=GPIO.LOW) # AC Main
         GPIO.setup(21, GPIO.OUT) 							#, initial=GPIO.LOW) # AC Lighs
         GPIO.setup(12, GPIO.OUT) 							#, initial=GPIO.LOW) # AC WaterPump
-	print "setting up GPIO Pullbacks"
   	GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  				#, initiate Hall sensor
   	GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)   #, on Hall call function
-        print "Setting up I2C sensors"
-	AtlasDetect()
+#	AtlasDetect()
 	return "ok"
+#################################
 
-def sensorCallback(channel):
-  	# Called if sensor output changes
-  	global vol
-  	global stat
-  	timestamp = time.time()
-  	stamp = datetime.datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
-  	if GPIO.input(channel):
-        	try:
-                	vol = vol+1
-
-        	except:
-                	vol = 0
-        	pass
-  	else:
-        	try:
-                	vol = vol+1
-        	except:
-                	vol = 0
-        	pass
-	#  try:
-	if vol != 0:
-		GPIO.output(12, GPIO.LOW)
-
+#################################
+#
+#
+#################################
 class atlas_i2c():
 	long_timeout = 2.0  # the timeout needed to query readings and calibrations
 	short_timeout = 1.0  # timeout for regular commands
@@ -130,7 +103,12 @@ class atlas_i2c():
 				pass
 		self.set_i2c_address(prev_addr)  # restore the address we were using
 		return i2c_devices
+#################################
 
+#################################
+#
+#
+#################################
 def AtlasDetect():
 	device = atlas_i2c()
 	p = subprocess.Popen(['i2cdetect', '-y','1'],stdout=subprocess.PIPE,)
@@ -145,7 +123,12 @@ def AtlasDetect():
                         	print "Address: ",Addr, "\tInfo: ", (device.query(verb))[3:]
                         except IOError:
                         	print("Query failed \n - Address may be invalid, use List_addr command to see available addresses")
+#################################
 
+#################################
+#
+#
+#################################
 def Atlas(addr,verb):
 	try:
 		device = atlas_i2c()  # creates the I2C port object, specify the address or bus if necessary
@@ -159,150 +142,49 @@ def Atlas(addr,verb):
 	except IOError:
 		"No I2C port detected"
 	return value
-def dbRow():
-	Farm = mysql.connector.connect(
-                host="localhost",
-                user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-        )
-        global mycursor
-	mycursor = Farm.cursor()
-        mycursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
-        myresult = mycursor.fetchone()
-	#+---------------------+--------+-------+---------+-----------+--------+-----------+-------+--------+--------+--------+-------+-----------+-----------+
-	#| date                | lights | ExFan | AirPump | WaterPump | period | mode      | pH    | EC     | TDS    | S      | SG    | LastFlood | NextFlood |
-	#+---------------------+--------+-------+---------+-----------+--------+-----------+-------+--------+--------+--------+-------+-----------+-----------+
-	#| 2019-12-28 09:56:04 | On     | Off   | Off     | Off       |     90 | Flowering | 6.800 | 99.999 | 99.999 | 99.999 | 1.030 | 09:49:16  | 12:49:16  |
-	#+---------------------+--------+-------+---------+-----------+--------+-----------+-------+--------+--------+--------+-------+-----------+-----------+
-	date = myresult[0]
-	lights = myresult[1]
-	ExFan = myresult[2]
-	AirPump = myresult[3]
-	WaterPump = myresult[4]
-	period = myresult[5]
-	mode = myresult[6]
-	pH = myresult[7]
-	EC = myresult[8]
-	TDS = myresult[9]
-	S = myresult[10]
-	SG = myresult[11]
-	LastFlood = myresult[12]
-	NextFlood  = myresult[13]
 
-        return date, lights, ExFan, AirPump, WaterPump, period, mode, pH, EC, TDS, S, SG, LastFlood, NextFlood;
+#################################
 
-def Light(date,Lights,mode):
-	now = strftime("%H:%M:%S")
-#	now = "23:00:00"
-	if mode == "Vegetative":
-		DayStart = "06:00:00"
-		DayEnd = "22:00:00"
-	elif mode == "Flowering":
-		DayStart = "08:00:00"
-                DayEnd = "20:00:00"
-	if now > DayStart  and  now < DayEnd:
-		GPIO.output(26, GPIO.HIGH)
-		GPIO.output(21, GPIO.HIGH)
-	else:
-		GPIO.output(21, GPIO.LOW)
-	Lstatus = GPIO.input(21)
-	if Lstatus:
-		LStatus = "On"
-	else:
-		LStatus = "Off"
+#################################
+#
+#
+#################################
+class BackChemSensors(threading.Thread):
 
-	return now, LStatus, DayStart, DayEnd
-
-def Flood(date,WaterPump,period,LastFlood, NextFlood):
-	now = datetime.datetime.now().strftime("%H:%M:%S")
-#	now = "23:55:16"
-	NextFlood = str(NextFlood)
-	PStatus = GPIO.input(12)
-	if now > NextFlood:
-		GPIO.output(26, GPIO.HIGH)
-                GPIO.output(12, GPIO.LOW)   # <---------------- change to HIGH when theres water or a way too check
-		PStatus = GPIO.input(12)
-		LastFlood = strftime("%H:%M:%S")
-		NextFlood = datetime.datetime.now() + datetime.timedelta(minutes = int(period))
-		NextFlood = NextFlood.strftime("%H:%M:%S")
-		
-	Pstatus = GPIO.input(12)
-        if Pstatus:
-                PStatus = "On"
-        else:
-                PStatus = "Off"
-
-	Farm = mysql.connector.connect(
-        	host="localhost",
-                user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-                )
-        global mycursor
-        sql = "INSERT INTO Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s)"
-        val = (now,mode,period,LastFlood,NextFlood)
-        mycursor.execute(sql, val)
-        mydb.commit()
-        print(mycursor.rowcount, "record inserted.")
-	PStatus = GPIO.input(12)
-	return now, PStatus, period, LastFlood, NextFlood
-
-def Display(mainreturn):
-	now = mainreturn[0]
-        mode = mainreturn[1]
-        DayStart = mainreturn[2]
-        DayEnd = mainreturn[3]
-        LStatus = mainreturn[4]
-        PStatus = mainreturn[5]
-        LastFlood = mainreturn[6]
-        NextFlood = mainreturn[7]
-	period = mainreturn[8]
-	print ""
-        print "RE3e presents"
-        print "An Evil Scientist SINdicate production"
-        print "GrowBot V. (The return of Growbot)"
-        print ""
-        print now, ",System init:", initreturn
-        print ""
-        print "mode:", mode
-        print "Day Start:", DayStart, ", Day End:", DayEnd  
-        print "Light Status: ",LStatus 
-        print ""
-        print "Pump Status: ",PStatus, "Period:", period
-        print "Last Flood: ",LastFlood, ", Next Flood: ",NextFlood
-	try:
-		#EC,TDS,S,SG
-		Ec = EC[0]
-		TDS = EC[1]
-		S = EC[2]
-		SG = EC[3]
-		print "pH:",pH, "EC:",Ec, "TDS:",TDS,"Salinity:",S,"Specfc Grav:",SG
-	except NameError:
-                print "pH:",pH
-
-class BackgroundSensors(threading.Thread):
-
-    def __init__(self, function_that_downloads):
+    def __init__(self, ChemSensors):
         threading.Thread.__init__(self)
         self.runnable = ReadSensors
         self.daemon = True
 
     def run(self):
         self.runnable()
+#################################
 
+#################################
+#
+#
+#################################
 def ReadSensors():
 		global EC
 		global pH
-		now = strftime("%H:%M:%S")
-		pH = Atlas(99,"i")
 		while True:
+			now = datetime.now()
+			now = now.strftime("%Y-%m-%d %H:%M:%S")
 			pH = Atlas(99,"r")
-			EC = Atlas(100, 'R')
-			Ec = EC[0]
-                	TDS = EC[1]
-                	S = EC[2]
-                	SG = EC[3]
+
+			
+	        	ECs = Atlas(100,"r")
+			ECs.split(',')
+			Ec,TDS,S,SG = ECs.split(',')
+			Ec = float (float(Ec) / 1000)
+			TDS = float (float(TDS) / 1000)
+			S = float (float(S) / 1)
+
+			#EC = Atlas(100, 'r')
+			#Ec = EC[0]
+                	#TDS = EC[1]
+                	#S = EC[2]
+                	#SG = EC[3]
 
 			Farm = mysql.connector.connect(
                 		host="localhost",
@@ -310,78 +192,255 @@ def ReadSensors():
                 		passwd="a-51d41e",
                 		database="Farm"
         		)
-        		global mycursor
-			sql = "INSERT INTO H2O (date,pH,EC,TDS,S,SG) VALUES (%s, %s)"
+#			+---------------------+-------+------+------+------+------+
+#			| date                | pH    | EC   | TDS  | S    | SG   |
+#			+---------------------+-------+------+------+------+------+
+#			| 2019-12-20 09:56:04 | 6.800 |  100 |  100 |  100 |    1 |
+#			+---------------------+-------+------+------+------+------+
+
+			H2O = Farm.cursor()
+			sql = "INSERT INTO Farm.H2O (date,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s)"
 			val = (now,pH,Ec,TDS,S,SG)
-			mycursor.execute(sql, val)
-			mydb.commit()
-			print(mycursor.rowcount, "record inserted.")
-			print now,pH,Ec,TDS,S,SG
+			H2O.execute(sql, val)
+			Farm.commit()
+			#print(H2O.rowcount, "record inserted.")
+			H2O.close
 			time.sleep(5)			
-		return pH, EC
+		return now,pH,Ec,TDS,S,SG
 
 
+#################################
 
-
-
-
-
-
-
-
-
-def main(initreturn):
+#################################
+#
+#
+#################################
+def dbH2ORead():
+        Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+        #global mycursor
+        h2ocursor = Farm.cursor()
+        h2ocursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
+        myresult = h2ocursor.fetchone()
+	h2ocursor.close
+#+---------------------+-------+------+------+------+------+
+#| date                | pH    | EC   | TDS  | S    | SG   |
+#+---------------------+-------+------+------+------+------+
+#| 2019-12-20 09:56:04 | 6.800 |  100 |  100 |  100 |    1 |
+#+---------------------+-------+------+------+------+------+
 	try:
-		dbrow = dbRow()
-		date = dbrow[0]
-		Lights = dbrow[1]
-		ExFan = dbrow[2]
-		AirPump = dbrow[3]
-		WaterPump = dbrow[4]
-		period = dbrow[5]
-		mode = dbrow[6]
-		pH = dbrow[7]
-		EC = dbrow[8]
-		TDS = dbrow[9]
-		S = dbrow[10]
-		SG = dbrow[11]
-		LastFlood = dbrow[12]
-		NextFlood = dbrow[13]
-
-		LightSched = Light(date, Lights, mode)
-		now = LightSched[0]
-		LStatus = LightSched[1]
-		DayStart = LightSched[2]
-		DayEnd = LightSched[3]
-		#    feed
-
-		FloodSched = Flood(date, WaterPump, period, LastFlood, NextFlood)
-		now = FloodSched[0]
-		PStatus = FloodSched[1]
-		period = FloodSched[2]
-		LastFlood = FloodSched[3]
-		NextFlood = FloodSched[4]
-	#    vent
-	#    monitor
-	#    calibrate
-	except KeyboardInterrupt:
-		# Reset GPIO settings
-		gpio.cleanup()
-		sys.exit(0)
-	finally:
-		#		print now, mode, DayStart, DayEnd, LStatus, PStatus,LastFlood, NextFlood, period
-		PStatus = GPIO.input(12)
-		return now, mode, DayStart, DayEnd, LStatus, PStatus, LastFlood, NextFlood, period
+	        date = myresult[0]
+		pH = myresult[1]
+		EC = myresult[2]
+		TDS = myresult[3]
+		S = myresult[4]
+		SG = myresult[5]
+		return date, pH, EC, TDS, S, SG
+	except TypeError:
+		print "no entry yet"
 
 
+#################################
+
+#################################
+#
+#
+#################################
+def dbShedRead():
+        Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+        #global mycursor
+        SheDcursor = Farm.cursor()
+        SheDcursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
+        myresult = SheDcursor.fetchone()
+        SheDcursor.close
+#select * from Shed;
+#+---------------------+-----------+--------+-----------+-----------+
+#| date                | mode      | period | LastFlood | NextFlood |
+#+---------------------+-----------+--------+-----------+-----------+
+#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
+#+---------------------+-----------+--------+-----------+-----------+
+	try:
+		date = myresult[0]
+		mode = myresult[1]
+		period = myresult[2]
+		LastFlood = myresult[3]
+		NextFlood = myresult[4]
+		return date, mode, period, LastFlood, NextFlood
+        except TypeError:
+                print "no entry yet"
+
+#################################
+
+#################################
+#
+#
+#################################
+def Light(mode):
+	now = datetime.datetime.now().strftime("%H:%M:%S")
+        if mode == "Vegetative":
+                DayStart = "06:00:00"
+                DayEnd = "22:00:00"
+        elif mode == "Flowering":
+                DayStart = "08:00:00"
+                DayEnd = "20:00:00"
+        if now > DayStart  and  now < DayEnd:
+                GPIO.output(26, GPIO.HIGH)
+                GPIO.output(21, GPIO.HIGH)
+        else:
+                GPIO.output(21, GPIO.LOW)
+        Lstatus = GPIO.input(21)
+        if Lstatus:
+                LStatus = "On"
+        else:
+                LStatus = "Off"
+
+        return now, LStatus, DayStart, DayEnd
+#################################
+
+#################################
+#
+#
+#################################
+def Flood():
+	now = datetime.datetime.now().strftime("%H:%M:%S")
+	try:
+		Shed=dbShedRead()
+        	date = Shed[0]
+        	mode = Shed[1]
+        	period = Shed[2]
+                LastFlood = Shed[3]
+                NextFlood = Shed[4]
+	        NextFlood = str(NextFlood)
+	        PStatus = GPIO.input(12)
+		print  "Now:", now,"NextFlood:", NextFlood
+	        if now > NextFlood:
+		        GPIO.output(26, GPIO.HIGH)
+                	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
+                	PStatus = GPIO.input(12)
+		return PStatus
+	except TypeError:
+		GPIO.output(26, GPIO.HIGH)
+                GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
+                PStatus = GPIO.input(12)
+		return PStatus
+#################################
+
+#################################
+#
+#
+#################################
+def sensorCallback(channel):
+	from datetime import datetime as dt
+ 	import datetime
+	# Called if sensor output changes
+  	global vol
+  	global stat
+	now = dt.now()
+	nowDate = now.strftime("%Y-%m-%d %H:%M:%S")
+	nowTime = now.strftime("%H:%M:%S")
+  	if GPIO.input(channel):
+        	try:
+                	vol = vol+1
+
+        	except:
+                	vol = 0
+        	pass
+  	else:
+        	try:
+                	vol = vol+1
+        	except:
+                	vol = 0
+        	pass
+	if vol > 0:
+		GPIO.output(12, GPIO.LOW)
+                try:
+			Shed=dbShedRead()
+                	mode = Shed[1]
+                	period = Shed[2]
+#                	LastFlood = Shed[3]
+#                	NextFlood = Shed[4]
+		except TypeError:
+			print "no previous entry"
+			period = 1
+			mode = 'Vegetative'
+			LastFlood= nowTime
+		LastFlood= nowTime
+		NextFlood = datetime.datetime.now() + datetime.timedelta(minutes = int(period))
+                NextFlood = NextFlood.strftime("%H:%M:%S")
+		Farm = mysql.connector.connect(
+	                host="localhost",
+        	        user="pi",
+        	        passwd="a-51d41e",
+        	        database="Farm"
+        	)
+        	SheD = Farm.cursor()
+#+---------------------+-----------+--------+-----------+-----------+
+#| date                | mode      | period | LastFlood | NextFlood |
+#+---------------------+-----------+--------+-----------+-----------+
+#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
+#+---------------------+-----------+--------+-----------+-----------+
+        	sql = "insert INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+           	val = (nowDate,mode,period,LastFlood,NextFlood)
+                SheD.execute(sql, val)
+                Farm.commit()
+		time.sleep(90)    ## <----------------FIX FOR DRAINTIME
+
+#################################
+#
+#
+#################################
 if __name__ == "__main__":
-
-	thread = BackgroundSensors(ReadSensors)
+	global h2owcursor
+	thread = BackChemSensors(ReadSensors)
 	thread.start()
 	initreturn = init()
 	time.sleep(1)
 	while True:
 		os.system('clear')
-		mainreturn = main(initreturn)
-		Display(mainreturn)
-		time.sleep(0.7)
+		try:
+			H2O=dbH2ORead()
+			date = H2O[0]
+			pH = H2O[1]
+			EC = H2O[2]
+			TDS = H2O[3]
+			S = H2O[4]
+			SG = H2O[5]
+#			print "date:", date, "pH:", pH, "EC:", EC, "TDS:", TDS, "S:", S, "SG:", SG
+		except TypeError:
+			print "no entry yet"
+		try:
+			Shed=dbShedRead()
+			date = Shed[0]
+	                mode = Shed[1]
+        	        period = Shed[2]
+        	        LastFlood = Shed[3]
+        	        NextFlood = Shed[4]
+#			print "date:", date, "mode:",  mode, "period:", period, "LastFlood:", LastFlood, "NextFlood:", NextFlood
+                except TypeError:
+                        print "no entry yet"
+			mode = "Vegetative"
+
+		Flood()
+		Light(mode)
+        	Pstatus = GPIO.input(12)
+        	if Pstatus:
+                	PStatus = "On"
+        	else:
+                	PStatus = "Off"
+		Lstatus = GPIO.input(21)
+        	if Lstatus:
+                	LStatus = "On"
+        	else:
+                	LStatus = "Off"
+
+		print "Lamp Status: ", LStatus, "Pump Status: ", PStatus
+		time.sleep(5)
