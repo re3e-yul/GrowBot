@@ -402,9 +402,10 @@ if __name__ == "__main__":
                         LStatus = "On"
                 else:
                         LStatus = "Off"
-
-                print "Lamp Status: ", LStatus, "Pump Status: ", PStatus
-                print "date:", date, "pH:", "pH", pH, "EC", EC, "TDS", TDS, "S", S, "SG", SG
+		print datetime.now().strftime("%H:%M:%S") 
+                print "Lamp Status: ", LStatus
+		print "Pump Status: ", PStatus, "NextFlood:", NextFlood
+                print "H2O:", "pH:", "pH", pH, "EC", EC, "TDS", TDS, "S", S, "SG", SG
 
 
 		time.sleep(2)
