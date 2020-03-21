@@ -26,6 +26,8 @@ def init():
         GPIO.setup(26, GPIO.OUT)							#, initial=GPIO.LOW) # AC Main
         GPIO.setup(21, GPIO.OUT) 							#, initial=GPIO.LOW) # AC Lighs
         GPIO.setup(12, GPIO.OUT) 							#, initial=GPIO.LOW) # AC WaterPump
+        GPIO.setup(5, GPIO.OUT)                                                        #, initial=GPIO.LOW) # AC Lighs
+        GPIO.setup(6, GPIO.OUT)
   	GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  				#, initiate Hall sensor
   	GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)   #, on Hall call function
 #	AtlasDetect()
@@ -310,9 +312,9 @@ def dbDataRead():
 		ExFan = myresult[3]
 		AirPump = myresult[4]
 		WaterPump = myresult[5]
-		Valve = myresult[6]
-		ValveD = myresult[7]
-		return date, main, lights, ExFan, AirPump, WaterPump, Valve, ValveD
+		ValveS = myresult[6]
+		ValveS = myresult[7]
+		return date, main, lights, ExFan, AirPump, WaterPump, ValveS, ValveS
         except TypeError:
                 print "no entry yet"
 
@@ -350,6 +352,7 @@ def Light(mode):
 #################################
 def Flood():
 	now = datetime.datetime.now().strftime("%H:%M:%S")
+	Valve("f")
 	try:
 		Shed=dbShedRead()
         	date = Shed[0]
@@ -371,6 +374,66 @@ def Flood():
                 PStatus = GPIO.input(12)
 		return PStatus
 #################################
+
+
+
+#################################
+#
+#
+#################################
+def Valve(dir):
+	
+	now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+	Act=dbDataRead()
+	date = Act[0]
+        main = Act[1]
+        LStatus = Act[2]
+        ExFan = Act[3]
+        AirPump = Act[4]
+        PStatus = Act[5]
+	ValveS = GPIO.input(5)
+        ValveD = GPIO.input(6)
+
+	if dir == "c":
+		if not ValveD:
+			GPIO.output(5, GPIO.HIGH)
+			GPIO.output(6, GPIO.HIGH)
+			time.sleep(13)
+	if dir == "f":
+		if ValveD:
+                        GPIO.output(5, GPIO.HIGH)
+                        GPIO.output(6, GPIO.HIGH)
+                        time.sleep(13)
+
+	ValveS = GPIO.input(5)
+	ValveD = GPIO.input(6)
+
+        if ValveS:
+	        ValveS = "On"
+        else:
+                ValveS = "Off"
+        if ValveD:
+        	ValveD = "Cycle"
+        else:
+        	ValveD = "Flood"
+
+                Farm = mysql.connector.connect(
+                        host="localhost",
+                        user="pi",
+                        passwd="a-51d41e",
+                        database="Farm"
+                )
+                SheD = Farm.cursor()
+#select * from farmdata order by date desc limit 1;
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+#| date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+#| 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
+#+---------------------+------+--------+-------+---------+-----------+------+------+
+                sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                val = (now,main,LStatus,ExFan,AirPump,PStatus,ValveS,ValveD)
+                SheD.execute(sql, val)
+                Farm.commit()
 
 #################################
 #
@@ -466,8 +529,8 @@ def Display():
 			ExFan = Act[3]
 			AirPump = Act[4]
 			PStatus = Act[5]
-			Valve = Act[6]
-			ValveD = Act[7]
+			ValveS = Act[6]
+			ValveS = Act[7]
 		except TypeError:
                         print "no entry yet"
 
@@ -485,6 +548,10 @@ def Display():
 		print ""
 		print "Lamp Status: ", LStatus
 		print "Pump Status: ", PStatus, "\tLastFlood:", LastFlood, "\tNextFlood:", NextFlood
+		print "Valve Direc: ",ValveS
+		print "Air Pump   : ", AirPump
+		print "Exhaust Fan: ", ExFan
+		
 		print ""
 		print "Chem analysis\t\tpH:", pH, "\tEC:\t", EC
 		print "\t\t\t\t\tTDS:\t", TDS
