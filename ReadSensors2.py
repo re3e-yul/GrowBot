@@ -17,6 +17,8 @@ import mysql.connector
 from time import gmtime, strftime
 import datetime
 import time
+
+
 def init():
 	os.system('clear')
         GPIO.setwarnings(False)
@@ -321,7 +323,7 @@ def Flood():
                 NextFlood = Shed[4]
 	        NextFlood = str(NextFlood)
 	        PStatus = GPIO.input(12)
-		print  "Now:", now,"NextFlood:", NextFlood
+#		print  "NextFlood:", now,"NextFlood:", NextFlood
 	        if now > NextFlood:
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
@@ -370,7 +372,7 @@ def sensorCallback(channel):
 #                	NextFlood = Shed[4]
 		except TypeError:
 			print "no previous entry"
-			period = 1
+			period = 10
 			mode = 'Vegetative'
 			LastFlood= nowTime
 		LastFlood= nowTime
@@ -406,6 +408,7 @@ if __name__ == "__main__":
 	time.sleep(1)
 	while True:
 		os.system('clear')
+		now = datetime.datetime.now().strftime("%H:%M:%S")
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
@@ -414,7 +417,6 @@ if __name__ == "__main__":
 			TDS = H2O[3]
 			S = H2O[4]
 			SG = H2O[5]
-#			print "date:", date, "pH:", pH, "EC:", EC, "TDS:", TDS, "S:", S, "SG:", SG
 		except TypeError:
 			print "no entry yet"
 		try:
@@ -424,7 +426,6 @@ if __name__ == "__main__":
         	        period = Shed[2]
         	        LastFlood = Shed[3]
         	        NextFlood = Shed[4]
-#			print "date:", date, "mode:",  mode, "period:", period, "LastFlood:", LastFlood, "NextFlood:", NextFlood
                 except TypeError:
                         print "no entry yet"
 			mode = "Vegetative"
@@ -441,6 +442,13 @@ if __name__ == "__main__":
                 	LStatus = "On"
         	else:
                 	LStatus = "Off"
-
-		print "Lamp Status: ", LStatus, "Pump Status: ", PStatus
+		print now
+		print ""
+		print "Lamp Status: ", LStatus
+		print "Pump Status: ", PStatus, "\tLastFlood:", LastFlood, "\tNextFlood:", NextFlood
+		print ""
+		print "Chem analysis\t\tpH:", pH, "\tEC:\t", EC
+		print "\t\t\t\t\tTDS:\t", TDS
+		print "\t\t\t\t\tS:\t", S
+		print "\t\t\t\t\tSG:\t", SG
 		time.sleep(5)
