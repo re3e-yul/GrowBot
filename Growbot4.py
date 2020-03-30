@@ -1,5 +1,6 @@
 #! /usr/bin/python
 import os
+import sys
 import threading
 import time
 import urllib2
@@ -281,8 +282,10 @@ def dbDataRead():
 
 
 def Display():
-        	from datetime import datetime as dt
-        	now = dt.now()
+#        	from datetime import datetime as dt
+#        	now = dt.now()
+		now = datetime.now()
+                now = now.strftime("%Y-%m-%d %H:%M:%S")
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
@@ -347,24 +350,32 @@ def Display():
 		return mode
 
 def Light(mode):
-        from datetime import datetime as dt
-        now = str(dt.now())
+#        from datetime import datetime as dt
+#        now = str(dt.now())
+	now = datetime.now()
+        now = now.strftime("%H:%M:%S")
         if mode == "Vegetative":
+		print (mode)
 		DayStart = "06:00:00"
-       	        DayEnd = "22:00:00"
+       	        DayEnd = "21:00:00"
         elif mode == "Flowering":
                	DayStart = "08:00:00"
                	DayEnd = "20:00:00"
+		print (DayStart, DayEnd)
 	if now > DayStart  and  now < DayEnd:
                	GPIO.output(26, GPIO.HIGH)
                	GPIO.output(21, GPIO.HIGH)
+		print ("Light on",now ,DayStart, DayEnd)
         else:
                	GPIO.output(21, GPIO.LOW)
+		print ("Light off")
 	Lstatus = GPIO.input(21)
         if Lstatus:
                 LStatus = "On"
         else:
                 LStatus = "Off"
+	print (LStatus)
+	time.sleep(5)
         return now, LStatus, DayStart, DayEnd
 def Flood():
         from datetime import datetime as dt
@@ -391,8 +402,10 @@ def Flood():
                 PStatus = GPIO.input(12)
 		return PStatus
 def Valve(dir):
-        from datetime import datetime as dt
-        now = dt.now()
+#        from datetime import datetime as dt
+#        now = dt.now()
+	now = datetime.now()
+        now = now.strftime("%Y-%m-%d %H:%M:%S")
 	Act = dbDataRead()
 	date = Act[0]
 	main = Act[1]
@@ -456,7 +469,13 @@ if __name__ == "__main__":
     
         time.sleep(1)
         while True:
+		try:
 			os.system('clear')
 			mode = Display()
 			Flood()
 			Light(mode)
+
+		except (KeyboardInterrupt, SystemExit):
+        		raise
+		except:
+			print()
