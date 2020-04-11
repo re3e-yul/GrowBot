@@ -19,10 +19,13 @@ def init():
         GPIO.setup(26, GPIO.OUT)							#, initial=GPIO.LOW) # AC Main
         GPIO.setup(21, GPIO.OUT) 							#, initial=GPIO.LOW) # AC Lighs
         GPIO.setup(12, GPIO.OUT) 							#, initial=GPIO.LOW) # AC WaterPump
-        GPIO.setup(5, GPIO.OUT)                                                        #, initial=GPIO.LOW) # AC Lighs
-        GPIO.setup(6, GPIO.OUT)
+        GPIO.setup(5, GPIO.OUT)                                                         #, initial=GPIO.LOW) # on/off 3w
+	GPIO.setup(20, GPIO.OUT)                                                        #, initial=GPIO.LOW) #air pump
+        GPIO.setup(16, GPIO.OUT)                                                         #, initial=GPIO.LOW) #ExFan
+        GPIO.setup(6, GPIO.OUT)								#, initial=GPIO.LOW) # Dir 3w
   	GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  				#, initiate Hall sensor
   	GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)   #, on Hall call function
+	GPIO.output(5, GPIO.HIGH)
 #	AtlasDetect()
 	return "ok"
 
@@ -137,7 +140,7 @@ def ReadSensors():
                         Farm.commit()
                         #print(H2O.rowcount, "record inserted.")
                         H2O.close
-                        time.sleep(5)
+                        #time.sleep(5)
                 return now,pH,Ec,TDS,S,SG
 def sensorCallback(channel):
 	from datetime import datetime as dt
@@ -193,7 +196,7 @@ def sensorCallback(channel):
            	val = (nowDate,mode,period,LastFlood,NextFlood)
                 SheD.execute(sql, val)
                 Farm.commit()
-		time.sleep(90)    ## <----------------FIX FOR DRAINTIME
+		#time.sleep(90)    ## <----------------FIX FOR DRAINTIME
 
 def dbH2ORead():
         Farm = mysql.connector.connect(
@@ -280,6 +283,40 @@ def dbDataRead():
         except TypeError:
                 print "no entry yet"
 
+def DataWrite():
+        Date = datetime.now()
+        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now()
+        now = now.strftime("%H:%M:%S")
+
+        main = GPIO.input(26)
+        Lights = GPIO.input(21)
+	APump = GPIO.input(20)
+        ExFan = GPIO.input(16)
+        WPump = GPIO.input(12)
+        ValveS = GPIO.input(5)
+        ValveD = GPIO.input(6)
+	Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+
+        SheD = Farm.cursor()
+        # select * from farmdata order by date desc limit 1;
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (Date, main, Lights, ExFan, APump, WPump, ValveS, ValveD)
+	print ("date",now,"main",main,"lights",Lights,"ExFan",ExFan,"AirPump",APump,"WaterPump",WPump,"3wv",ValveS,"3wvD",ValveD)
+        #time.sleep(1)
+        SheD.execute(sql, val)
+        Farm.commit()
+
 
 def Display():
 #        	from datetime import datetime as dt
@@ -319,18 +356,18 @@ def Display():
 			ExFan = Act[3]
 			AirPump = Act[4]
 			PStatus = Act[5]
-			ValveS = Act[6]
-			ValveD = Act[7]
+			ValveS = GPIO.input(5)
+			ValveD = GPIO.input(6)
 		except TypeError:
                         print "no entry yet"
 		if ValveS:
-                        ValveS = "On"
-                else:
                         ValveS = "Off"
-                if ValveD:
-                        ValveD = "Cycle"
                 else:
+                        ValveS = "On"
+                if ValveD:
                         ValveD = "Flood"
+                else:
+                        ValveD = "Cycle"
         	Pstatus = GPIO.input(12)
         	if Pstatus:
                 	PStatus = "On"
@@ -341,7 +378,7 @@ def Display():
                 	LStatus = "On"
         	else:
                 	LStatus = "Off"
-		print now
+		print now, "status: ", main
 		print ""
 		print "Lamp Status: ", LStatus
 		print "Pump Status: ", PStatus, "\tLastFlood:", LastFlood, "\tNextFlood:", NextFlood
@@ -373,47 +410,38 @@ def Light(mode):
         else:
                	GPIO.output(21, GPIO.LOW)
 		#print ("Light off")
-        Act = dbDataRead()
-        date = Act[0]
+#        Act = dbDataRead()
+#        date = Act[0]
 #        main = Act[1]
 #       LStatus = Act[2]
-        ExFan = Act[3]
-        AirPump = Act[4]
-        PStatus = Act[5]
-        ValveS = Act[6]
-        ValveD = Act[7]
+#        ExFan = Act[3]
+#        AirPump = Act[4]
+#        PStatus = Act[5]
+#        ValveS = Act[6]
+#        ValveD = Act[7]
 
-        main = GPIO.input(26)
-        if main:
-                main = "On"
-        else:
-                main = "Off"
+#        main = GPIO.input(26)
+	LStatus = GPIO.input(21)
+#       Farm = mysql.connector.connect(
+#                host="localhost",
+#                user="pi",
+#                passwd="a-51d41e",
+#                database="Farm"
+#        )
 
-	LStatus = GPIO.input(12)
-        if LStatus:
-                LStatus = "On"
-        else:
-                LStatus = "Off"
-        Farm = mysql.connector.connect(
-                host="localhost",
-                user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-        )
-
-        SheD = Farm.cursor()
+#        SheD = Farm.cursor()
         # select * from farmdata order by date desc limit 1;
         # +---------------------+------+--------+-------+---------+-----------+------+------+
         # | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
         # +---------------------+------+--------+-------+---------+-----------+------+------+
         # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
         # +---------------------+------+--------+-------+---------+-----------+------+------+
-        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
-	time.sleep(1)
-        SheD.execute(sql, val)
-        Farm.commit()
-	SheD.close()
+#        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+#        val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
+	#time.sleep(1)
+#        SheD.execute(sql, val)
+#        Farm.commit()
+#	SheD.close()
         return now, LStatus, DayStart, DayEnd
 def Flood():
 
@@ -422,7 +450,6 @@ def Flood():
 
         now = datetime.now()
         now = now.strftime("%H:%M:%S")
-	Valve("f")
 	try:
 		Shed=dbShedRead()
         	date = Shed[0]
@@ -432,52 +459,50 @@ def Flood():
                 NextFlood = Shed[4]
 	        NextFlood = str(NextFlood)
 	        PStatus = GPIO.input(12)
-		#time.sleep(5)
+		##time.sleep(5)
 	        if now > NextFlood and PStatus == 0:
+			Valve("f")
 			print  "Now:", now,"LastFlood:", LastFlood, "NextFlood:", NextFlood
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
 
- 		        Act = dbDataRead()
- 		        date = Act[0]
-        		#main = Act[1]
-        		LStatus = Act[2]
-        		ExFan = Act[3]
-        		AirPump = Act[4]
-        		#PStatus = Act[5]
-        		ValveS = Act[6]
-        		ValveD = Act[7]
-		        main = GPIO.input(26)
-		        if main:
-                		main = "On"
-        		else:
-                		main = "Off"
-			PStatus = GPIO.input(12)
-        		if PStatus:
-                		PStatus = "On"
-        		else:
-                		PStatus = "Off"
-        
-        		Farm = mysql.connector.connect(
-                	host="localhost",
-                	user="pi",
-                	passwd="a-51d41e",
-                	database="Farm"
-        		)
+# 		        Act = dbDataRead()
+# 		        date = Act[0]
+#        		main = Act[1]
+#        		LStatus = Act[2]
+#        		ExFan = Act[3]
+#        		AirPump = Act[4]
+#        		#PStatus = Act[5]
+#        		ValveS = GPIO.input(6)
+#        		ValveD = GPIO.input(5)
+#		        main = GPIO.input(26)
+#			PStatus = GPIO.input(12)
+#			Date = datetime.now()
+#		        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
+#       		Farm = mysql.connector.connect(
+#                	host="localhost",
+#                	user="pi",
+#                	passwd="a-51d41e",
+#                	database="Farm"
+#        		)
 
-        		SheD = Farm.cursor()
+#        		SheD = Farm.cursor()
         # select * from farmdata order by date desc limit 1;
         # +---------------------+------+--------+-------+---------+-----------+------+------+
         # | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
         # +---------------------+------+--------+-------+---------+-----------+------+------+
         # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
         # +---------------------+------+--------+-------+---------+-----------+------+------+
-        		sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-        		val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
-		   	time.sleep(1)
-			SheD.execute(sql, val)
-        		Farm.commit()
-			SheD.close()
+#        		sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+#        		val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
+		   	#time.sleep(1)
+#			try:
+#				SheD.execute(sql, val)
+#        		except mysql.connector.errors.IntegrityError:
+				#time.sleep(2)
+#				SheD.execute(sql, val)
+#			Farm.commit()
+#			SheD.close()
 			return PStatus
 	except TypeError:
 		GPIO.output(26, GPIO.HIGH)
@@ -487,6 +512,7 @@ def Flood():
 def Valve(dir):
 #        from datetime import datetime as dt
 #        now = dt.now()
+	print "dir:",dir
 	now = datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	Act = dbDataRead()
@@ -503,16 +529,13 @@ def Valve(dir):
 		if not ValveD:
 			GPIO.output(5, GPIO.HIGH)
 			GPIO.output(6, GPIO.HIGH)
-			time.sleep(13)
+			#time.sleep(13)
 	if dir == "f":
 		if ValveD:
 			GPIO.output(5, GPIO.HIGH)
 			GPIO.output(6, GPIO.HIGH)
-			time.sleep(13)
-
-	ValveS = GPIO.input(5)
-	ValveD = GPIO.input(6)
-
+			#time.sleep(13)
+	GPIO.output(5, GPIO.LOW)
 	if ValveS:
 		ValveS = "On"
 	else:
@@ -537,12 +560,10 @@ def Valve(dir):
 		# +---------------------+------+--------+-------+---------+-----------+------+------+
 		sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
 		val = (now, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
-		time.sleep(1)
+		#time.sleep(1)
 		SheD.execute(sql, val)
 		Farm.commit()
 		SheD.close()
-	GPIO.output(5, GPIO.LOW)
-
 if __name__ == "__main__":
 
 	thread = ChenSensors(ReadSensors)
@@ -550,13 +571,15 @@ if __name__ == "__main__":
 	initreturn = init()
 
     
-        time.sleep(1)
+        #time.sleep(1)
         while True:
 		try:
 			os.system('clear')
 			mode = Display()
 			Flood()
 			Light(mode)
+			time.sleep(1)
+			DataWrite()
 
                 except KeyboardInterrupt:
                         # Reset GPIO settings
