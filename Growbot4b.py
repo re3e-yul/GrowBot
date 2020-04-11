@@ -1,6 +1,9 @@
 #! /usr/bin/python
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
 import threading
 import time
 import urllib2
@@ -88,7 +91,11 @@ def Atlas(addr,verb):
         except IOError:
                 "No I2C port detected"
         return value
+<<<<<<< HEAD
 class ChemSensors(threading.Thread):
+=======
+class ChenSensors(threading.Thread):
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
 
     def __init__(self, Read_Chem_Sensors):
         threading.Thread.__init__(self)
@@ -282,10 +289,15 @@ def dbDataRead():
 
 
 def Display():
+<<<<<<< HEAD
 #        	from datetime import datetime as dt
 #        	now = dt.now()
 		now = datetime.now()
                 now = now.strftime("%Y-%m-%d %H:%M:%S")
+=======
+        	from datetime import datetime as dt
+        	now = dt.now()
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
@@ -324,12 +336,20 @@ def Display():
 		except TypeError:
                         print "no entry yet"
 
+<<<<<<< HEAD
         	#Pstatus = GPIO.input(12)
+=======
+        	Pstatus = GPIO.input(12)
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
         	if Pstatus:
                 	PStatus = "On"
         	else:
                 	PStatus = "Off"
+<<<<<<< HEAD
 		#Lstatus = GPIO.input(21)
+=======
+		Lstatus = GPIO.input(21)
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
         	if Lstatus:
                 	LStatus = "On"
         	else:
@@ -350,6 +370,7 @@ def Display():
 		return mode
 
 def Light(mode):
+<<<<<<< HEAD
 #        from datetime import datetime as dt
 #        now = str(dt.now())
 	now = datetime.now()
@@ -424,12 +445,31 @@ def Light(mode):
                         SheD.execute(sql, val)
                         Farm.commit()
 	
+=======
+        from datetime import datetime as dt
+        now = str(dt.now())
+        if mode == "Vegetative":
+		DayStart = "06:00:00"
+       	        DayEnd = "22:00:00"
+        elif mode == "Flowering":
+               	DayStart = "08:00:00"
+               	DayEnd = "20:00:00"
+	if now > DayStart  and  now < DayEnd:
+               	GPIO.output(26, GPIO.HIGH)
+               	GPIO.output(21, GPIO.HIGH)
+        else:
+               	GPIO.output(21, GPIO.LOW)
+	Lstatus = GPIO.input(21)
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
         if Lstatus:
                 LStatus = "On"
         else:
                 LStatus = "Off"
+<<<<<<< HEAD
 	print (LStatus)
 	time.sleep(5)
+=======
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
         return now, LStatus, DayStart, DayEnd
 def Flood():
         from datetime import datetime as dt
@@ -449,6 +489,7 @@ def Flood():
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
                 	PStatus = GPIO.input(12)
+<<<<<<< HEAD
 
                 Farm = mysql.connector.connect(
                         host="localhost",
@@ -470,6 +511,8 @@ def Flood():
                 Farm.commit()
 
 
+=======
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
 		return PStatus
 	except TypeError:
 		GPIO.output(26, GPIO.HIGH)
@@ -477,10 +520,15 @@ def Flood():
                 PStatus = GPIO.input(12)
 		return PStatus
 def Valve(dir):
+<<<<<<< HEAD
 #        from datetime import datetime as dt
 #        now = dt.now()
 	now = datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
+=======
+        from datetime import datetime as dt
+        now = dt.now()
+>>>>>>> 967a207605df579e23b5c11d08c66f6cdfc6de1e
 	Act = dbDataRead()
 	date = Act[0]
 	main = Act[1]
@@ -549,8 +597,7 @@ if __name__ == "__main__":
 			mode = Display()
 			Flood()
 			Light(mode)
-
-		except (KeyboardInterrupt, SystemExit):
-        		raise
-		except:
-			print()
+		except KeyboardInterrupt:
+			# Reset GPIO settings
+			gpio.cleanup()
+			sys.exit(0)

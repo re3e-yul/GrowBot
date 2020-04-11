@@ -320,10 +320,17 @@ def Display():
 			AirPump = Act[4]
 			PStatus = Act[5]
 			ValveS = Act[6]
-			ValveS = Act[7]
+			ValveD = Act[7]
 		except TypeError:
                         print "no entry yet"
-
+		if ValveS:
+                        ValveS = "On"
+                else:
+                        ValveS = "Off"
+                if ValveD:
+                        ValveD = "Cycle"
+                else:
+                        ValveD = "Flood"
         	Pstatus = GPIO.input(12)
         	if Pstatus:
                 	PStatus = "On"
@@ -338,7 +345,7 @@ def Display():
 		print ""
 		print "Lamp Status: ", LStatus
 		print "Pump Status: ", PStatus, "\tLastFlood:", LastFlood, "\tNextFlood:", NextFlood
-		print "Valve Direc: ",ValveS
+		print "Valve      : ",ValveS, "\tDir:", ValveD
 		print "Air Pump   : ", AirPump
 		print "Exhaust Fan: ", ExFan
 
@@ -350,36 +357,71 @@ def Display():
 		return mode
 
 def Light(mode):
-#        from datetime import datetime as dt
-#        now = str(dt.now())
+        Date = datetime.now()
+        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
 	now = datetime.now()
         now = now.strftime("%H:%M:%S")
         if mode == "Vegetative":
-		print (mode)
 		DayStart = "06:00:00"
        	        DayEnd = "22:17:00"
         elif mode == "Flowering":
                	DayStart = "08:00:00"
                	DayEnd = "20:00:00"
-		print (DayStart, DayEnd)
 	if now > DayStart  and  now < DayEnd:
                	GPIO.output(26, GPIO.HIGH)
                	GPIO.output(21, GPIO.HIGH)
-		print ("Light on",now ,DayStart, DayEnd)
         else:
                	GPIO.output(21, GPIO.LOW)
-		print ("Light off")
-	Lstatus = GPIO.input(21)
-        if Lstatus:
+		#print ("Light off")
+        Act = dbDataRead()
+        date = Act[0]
+#        main = Act[1]
+#       LStatus = Act[2]
+        ExFan = Act[3]
+        AirPump = Act[4]
+        PStatus = Act[5]
+        ValveS = Act[6]
+        ValveD = Act[7]
+
+        main = GPIO.input(26)
+        if main:
+                main = "On"
+        else:
+                main = "Off"
+
+	LStatus = GPIO.input(12)
+        if LStatus:
                 LStatus = "On"
         else:
                 LStatus = "Off"
-	print (LStatus)
-	time.sleep(5)
+        Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+
+        SheD = Farm.cursor()
+        # select * from farmdata order by date desc limit 1;
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
+	time.sleep(1)
+        SheD.execute(sql, val)
+        Farm.commit()
+	SheD.close()
         return now, LStatus, DayStart, DayEnd
 def Flood():
-        from datetime import datetime as dt
-        now = dt.now()
+
+	Date = datetime.now()
+        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
+
+        now = datetime.now()
+        now = now.strftime("%H:%M:%S")
 	Valve("f")
 	try:
 		Shed=dbShedRead()
@@ -390,12 +432,53 @@ def Flood():
                 NextFlood = Shed[4]
 	        NextFlood = str(NextFlood)
 	        PStatus = GPIO.input(12)
-#		print  "NextFlood:", now,"NextFlood:", NextFlood
-	        if now > NextFlood:
+		#time.sleep(5)
+	        if now > NextFlood and PStatus == 0:
+			print  "Now:", now,"LastFlood:", LastFlood, "NextFlood:", NextFlood
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
-                	PStatus = GPIO.input(12)
-		return PStatus
+
+ 		        Act = dbDataRead()
+ 		        date = Act[0]
+        		#main = Act[1]
+        		LStatus = Act[2]
+        		ExFan = Act[3]
+        		AirPump = Act[4]
+        		#PStatus = Act[5]
+        		ValveS = Act[6]
+        		ValveD = Act[7]
+		        main = GPIO.input(26)
+		        if main:
+                		main = "On"
+        		else:
+                		main = "Off"
+			PStatus = GPIO.input(12)
+        		if PStatus:
+                		PStatus = "On"
+        		else:
+                		PStatus = "Off"
+        
+        		Farm = mysql.connector.connect(
+                	host="localhost",
+                	user="pi",
+                	passwd="a-51d41e",
+                	database="Farm"
+        		)
+
+        		SheD = Farm.cursor()
+        # select * from farmdata order by date desc limit 1;
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
+        # +---------------------+------+--------+-------+---------+-----------+------+------+
+        		sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        		val = (Date, main, LStatus, ExFan, AirPump, PStatus, ValveS, ValveD)
+		   	time.sleep(1)
+			SheD.execute(sql, val)
+        		Farm.commit()
+			SheD.close()
+			return PStatus
 	except TypeError:
 		GPIO.output(26, GPIO.HIGH)
                 GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
@@ -457,8 +540,8 @@ def Valve(dir):
 		time.sleep(1)
 		SheD.execute(sql, val)
 		Farm.commit()
-
-
+		SheD.close()
+	GPIO.output(5, GPIO.LOW)
 
 if __name__ == "__main__":
 
@@ -475,7 +558,9 @@ if __name__ == "__main__":
 			Flood()
 			Light(mode)
 
-		except (KeyboardInterrupt, SystemExit):
-        		raise
-		except:
-			print()
+                except KeyboardInterrupt:
+                        # Reset GPIO settings
+                        GPIO.cleanup()
+                        os._exit(1)
+			#sys.exit(0)
+			
