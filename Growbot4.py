@@ -9,7 +9,7 @@ import fcntl # used to access I2C parameters like addresses
 import time # used for sleep delay and timestamps
 import mysql.connector
 import datetime
-from datetime import datetime
+#from datetime import datetime
 import RPi.GPIO as GPIO
 
 def init():
@@ -103,7 +103,7 @@ def ReadSensors():
                 global EC
                 global pH
                 while True:
-                        now = datetime.now()
+                        now = datetime.datetime.now()
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
                         pH = Atlas(99,"r")
 
@@ -275,9 +275,9 @@ def dbDataRead():
                 print "no entry yet"
 
 def DataWrite():
-        Date = datetime.now()
+        Date = datetime.datetime.now()
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-        now = datetime.now()
+        now = datetime.datetime.now()
         now = now.strftime("%H:%M:%S")
 
         main = GPIO.input(26)
@@ -308,7 +308,7 @@ def DataWrite():
 
 
 def Display():
-		now = datetime.now()
+		now = datetime.datetime.now()
                 now = now.strftime("%Y-%m-%d %H:%M:%S")
 		try:
 			H2O=dbH2ORead()
@@ -387,9 +387,9 @@ def Display():
 		return mode
 
 def Light(mode):
-        Date = datetime.now()
+        Date = datetime.datetime.now()
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-	now = datetime.now()
+	now = datetime.datetime.now()
         now = now.strftime("%H:%M:%S")
         if mode == "Vegetative":
 		DayStart = "06:00:00"
@@ -406,9 +406,9 @@ def Light(mode):
 	LStatus = GPIO.input(21)
 
 def Flood():
-	Date = datetime.now()
+	Date = datetime.datetime.now()
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-        now = datetime.now()
+        now = datetime.datetime.now()
         now = now.strftime("%H:%M:%S")
 	try:
 		Shed=dbShedRead()
@@ -417,9 +417,12 @@ def Flood():
         	period = Shed[2]
                 LastFlood = Shed[3]
                 NextFlood = Shed[4]
-	        NextFlood = str(NextFlood)
-	        PStatus = GPIO.input(12)
-	        if now > NextFlood and PStatus == 0:
+		PStatus = GPIO.input(12)
+		NextFlood = str(NextFlood)
+		NextFlood = datetime.datetime.strptime(NextFlood, '%H:%M:%S')
+		NextFlood = NextFlood.strftime('%H:%M:%S')
+		NextFlood = str(NextFlood)
+		if now > NextFlood: # and PStatus == 0:
 			Valve("f")
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
@@ -429,7 +432,7 @@ def Flood():
                 PStatus = GPIO.input(12)
 		return PStatus
 def Valve(dir):
-	now = datetime.now()
+	now = datetime.datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	ValveS = GPIO.input(5)
 	ValveD = GPIO.input(6)
