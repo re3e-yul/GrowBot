@@ -422,7 +422,7 @@ def Flood():
 		NextFlood = datetime.datetime.strptime(NextFlood, '%H:%M:%S')
 		NextFlood = NextFlood.strftime('%H:%M:%S')
 		NextFlood = str(NextFlood)
-		if now > NextFlood: # and PStatus == 0:
+		if now > NextFlood and PStatus == 0:
 			Valve("f")
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
