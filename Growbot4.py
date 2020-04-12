@@ -114,6 +114,24 @@ def ReadSensors():
                         Ec = float (float(Ec) / 1000)
                         TDS = float (float(TDS) / 1000)
                         S = float (float(S) / 1)
+
+			path = "/sys/bus/w1/devices/"
+			dir_list = os.listdir(path)
+			for path in dir_list:
+	        		if '28' in path:
+        	        		path = "/sys/bus/w1/devices/" + path + "/w1_slave"
+			f = open(path, "r")
+			for last_line in f:
+        			pass
+			temp = last_line.split()
+			temp = str(temp[-1])
+			temp = (float(temp.strip("t=")) /1000 )
+			#print temp,'c'
+			if temp > 28.5:
+				GPIO.output(16, GPIO.HIGH)
+			else:
+				GPIO.output(16, GPIO.LOW)
+			time.sleep(1)
                         Farm = mysql.connector.connect(
                                 host="localhost",
                                 user="pi",
@@ -127,8 +145,8 @@ def ReadSensors():
 #                       +---------------------+-------+------+------+------+------+
 
                         H2O = Farm.cursor()
-                        sql = "INSERT INTO Farm.H2O (date,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s)"
-                        val = (now,pH,Ec,TDS,S,SG)
+                        sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                        val = (now,temp,pH,Ec,TDS,S,SG)
                         H2O.execute(sql, val)
                         Farm.commit()
                         H2O.close
@@ -208,12 +226,13 @@ def dbH2ORead():
 #+---------------------+-------+------+------+------+------+
 	try:
 	        date = myresult[0]
-		pH = myresult[1]
-		EC = myresult[2]
-		TDS = myresult[3]
-		S = myresult[4]
-		SG = myresult[5]
-		return date, pH, EC, TDS, S, SG
+		Temp = myresult[1]
+		pH = myresult[2]
+		EC = myresult[3]
+		TDS = myresult[4]
+		S = myresult[5]
+		SG = myresult[6]
+		return date, Temp, pH, EC, TDS, S, SG
 	except TypeError:
 		print "no entry yet"
 def dbShedRead():
@@ -313,12 +332,14 @@ def Display():
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
-			pH = H2O[1]
-			EC = H2O[2]
-			TDS = H2O[3]
-			S = H2O[4]
-			SG = H2O[5]
+			Temp = H2O[1]
+			pH = H2O[2]
+			EC = H2O[3]
+			TDS = H2O[4]
+			S = H2O[5]
+			SG = H2O[6]
 		except TypeError:
+			Temp ='0'
 			pH ='0'
 			EC ='0'
 			TDS ='0'
@@ -380,10 +401,10 @@ def Display():
 		print "Exhaust Fan: ", ExFan
 
 		print ""
-		print "Chem analysis\t\tpH:", pH, "\tEC:\t", EC
-		print "\t\t\t\t\tTDS:\t", TDS
-		print "\t\t\t\t\tS:\t", S
-		print "\t\t\t\t\tSG:\t", SG
+		print "Chem analysis\tt=",Temp,"c\tpH:", pH, "\tEC:\t", EC
+		print "\t\t\t\t\t\tTDS:\t", TDS
+		print "\t\t\t\t\t\tS:\t", S
+		print "\t\t\t\t\t\tSG:\t", SG
 		return mode
 
 def Light(mode):
