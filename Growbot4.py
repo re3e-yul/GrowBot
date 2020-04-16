@@ -91,7 +91,7 @@ def Atlas(addr,verb):
         except IOError:
                 "No I2C port detected"
         return value
-class ChenSensors(threading.Thread):
+class ChemSensors(threading.Thread):
 
     def __init__(self, Read_Chem_Sensors):
         threading.Thread.__init__(self)
@@ -127,9 +127,9 @@ def ReadSensors():
 			temp = str(temp[-1])
 			temp = (float(temp.strip("t=")) /1000 )
 			#print temp,'c'
-			if temp > 28.5:
+			if temp > 28:
 				GPIO.output(16, GPIO.HIGH)
-			elif temp < 27.5:
+			elif temp < 27:
 				GPIO.output(16, GPIO.LOW)
 			time.sleep(1)
                         Farm = mysql.connector.connect(
@@ -376,29 +376,48 @@ def Display():
 			PStatus = GPIO.input(12)
 			ValveS = GPIO.input(5)
 			ValveD = GPIO.input(6)
+		main = GPIO.input(26)
                 if main:
                         main = "On"
                 else:
                         main = "Off"
 
+		ValveS = GPIO.input(5)
 		if ValveS:
                         ValveS = "Off"
                 else:
                         ValveS = "On"
+
+		ValveD = GPIO.input(6)
                 if ValveD:
                         ValveD = "Flood"
                 else:
                         ValveD = "Cycle"
+
         	Pstatus = GPIO.input(12)
         	if Pstatus:
                 	PStatus = "On"
         	else:
                 	PStatus = "Off"
+
 		Lstatus = GPIO.input(21)
         	if Lstatus:
                 	LStatus = "On"
         	else:
                 	LStatus = "Off"
+
+		AirPump = GPIO.input(20)
+                if AirPump:
+                        AirPump = "On"
+                else:
+                        AirPump = "Off"
+
+                ExFan = GPIO.input(16)
+		if ExFan:
+                        ExFan = "On"
+                else:
+                        ExFan = "Off"
+		
 		print now
 		print ""
 		print "status     : ", main
@@ -513,10 +532,12 @@ def Valve(dir):
                         GPIO.output(5, GPIO.HIGH)
 
 if __name__ == "__main__":
-	thread = ChenSensors(ReadSensors)
-	thread.start()
+	thread = ChemSensors(ReadSensors)
 	initreturn = init()
         while True:
+		if thread.is_alive() is False:
+			thread = ChemSensors(ReadSensors)
+			thread.start()
 		try:
 			os.system('clear')
 			mode = Display()
