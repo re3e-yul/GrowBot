@@ -455,22 +455,20 @@ def Flood():
 		LastFlood = LastFlood.strftime('%H:%M:%S')
 		TNext = datetime.datetime.strptime(NextFlood, '%H:%M:%S')
 		TLast = datetime.datetime.strptime(LastFlood, '%H:%M:%S')
-		
+
 		tdelta = TNext - TLast
 		tdelta = str(tdelta)
-		if "-1 day" in tdelta:
-			tdelta = -1
-		else:
-			tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
-			tdelta = tdelta.strftime('%H:%M:%S')
-		#print ("gLast", LastFlood, type(LastFlood))
-		#print ("gnext", NextFlood, type(NextFlood))
-		#print ("gLast", TLast, type(TLast))
-                #print ("gnext", TNext, type(TNext))
+		if 
+		tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
+		tdelta = tdelta.strftime('%H:%M:%S')
+		print ("gLast", LastFlood, type(LastFlood))
+		print ("gnext", NextFlood, type(NextFlood))
+		print ("gLast", TLast, type(TLast))
+                print ("gnext", TNext, type(TNext))
 		print ("Tdela:", tdelta)
 		time.sleep(2)
 
-		if now > NextFlood  and tdelta > 0 and PStatus == 0:
+		if now > NextFlood  and PStatus == 0:
 			Valve("f")
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
