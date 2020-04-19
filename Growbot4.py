@@ -1,6 +1,7 @@
 #! /usr/bin/python
 import os
 import sys
+sys.path.append('/usr/local/lib/python3.5/dist-packages')
 import threading
 import time
 import urllib2
@@ -9,7 +10,7 @@ import fcntl # used to access I2C parameters like addresses
 import time # used for sleep delay and timestamps
 import mysql.connector
 import datetime
-#from datetime import datetime
+from pytz import timezone
 import RPi.GPIO as GPIO
 
 def init():
@@ -24,7 +25,8 @@ def init():
         GPIO.setup(16, GPIO.OUT)                                                         #, initial=GPIO.LOW) #ExFan
         GPIO.setup(6, GPIO.OUT)								#, initial=GPIO.LOW) # Dir 3w
   	GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  				#, initiate Hall sensor
-  	GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)   #, on Hall call function
+  	GPIO.add_event_detect(12, GPIO.RISING, callback=PumpCallback, bouncetime=900)   #, on Pump call function
+	GPIO.add_event_detect(22, GPIO.BOTH, callback=HallCallback, bouncetime=900)   #, on Hall call function
 	GPIO.output(5, GPIO.HIGH)
 #	AtlasDetect()
 	return "ok"
@@ -99,15 +101,16 @@ class ChemSensors(threading.Thread):
 
     def run(self):
         self.runnable()
+
 def ReadSensors():
                 global EC
                 global pH
                 while True:
-                        now = datetime.datetime.now()
-                        now = now.strftime("%Y-%m-%d %H:%M:%S")
-                        pH = Atlas(99,"r")
+			TZ = timezone('America/Montreal')
+			now = datetime.datetime.now(TZ)
+			now = now.strftime("%Y-%m-%d %H:%M:%S") 
 
-
+			pH = Atlas(99,"r")
                         ECs = Atlas(100,"r")
                         ECs.split(',')
                         Ec,TDS,S,SG = ECs.split(',')
@@ -127,39 +130,46 @@ def ReadSensors():
 			temp = str(temp[-1])
 			temp = (float(temp.strip("t=")) /1000 )
 			#print temp,'c'
-			if temp > 28:
-				GPIO.output(16, GPIO.HIGH)
-			elif temp < 27:
-				GPIO.output(16, GPIO.LOW)
-			time.sleep(1)
-                        Farm = mysql.connector.connect(
-                                host="localhost",
-                                user="pi",
-                                passwd="a-51d41e",
-                                database="Farm"
-                        )
-#                       +---------------------+-------+------+------+------+------+
-#                       | date                | pH    | EC   | TDS  | S    | SG   |
-#                       +---------------------+-------+------+------+------+------+
-#                       | 2019-12-20 09:56:04 | 6.800 |  100 |  100 |  100 |    1 |
-#                       +---------------------+-------+------+------+------+------+
+			if temp < 99:
+				if temp > 28:
+					GPIO.output(16, GPIO.HIGH)
+				elif temp < 27:
+					GPIO.output(16, GPIO.LOW)
+				elif temp < 50:
+			        Farm = mysql.connector.connect(
+                        	        host="localhost",
+                        	        user="pi",
+                        	        passwd="a-51d41e",
+                        	        database="Farm"
+                        	)
+#                       	+---------------------+-------+------+------+------+------+
+#                       	| date                | pH    | EC   | TDS  | S    | SG   |
+#                       	+---------------------+-------+------+------+------+------+
+#                       	| 2019-12-20 09:56:04 | 6.800 |  100 |  100 |  100 |    1 |
+#                       	+---------------------+-------+------+------+------+------+
 
-                        H2O = Farm.cursor()
-                        sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                        val = (now,temp,pH,Ec,TDS,S,SG)
-                        H2O.execute(sql, val)
-                        Farm.commit()
-                        H2O.close
+	                        H2O = Farm.cursor()
+        	                sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                	        val = (now,temp,pH,Ec,TDS,S,SG)
+                        	H2O.execute(sql, val)
+                        	Farm.commit()
+                        	H2O.close
                 return now,pH,Ec,TDS,S,SG
 
-
-def sensorCallback(channel):
+def PumpCallback(channel):
+	level = 0
+	while GPIO.input(channel):
+		vol = vol +1
+		print vol
+		
+def HallCallback(channel):
 	from datetime import datetime as dt
  	import datetime
 	# Called if sensor output changes
   	global vol
   	global stat
-	now = dt.now()
+	TZ = timezone('America/Montreal')
+	now = dt.now(TZ)
 	nowDate = now.strftime("%Y-%m-%d %H:%M:%S")
 	nowTime = now.strftime("%H:%M:%S")
   	if GPIO.input(channel):
@@ -177,10 +187,12 @@ def sensorCallback(channel):
         	pass
 	if vol > 0:
 		GPIO.output(12, GPIO.LOW)
-                try:
+		while vol > 0:
+	        	time.sleep(1)
+		try:
 			Shed=dbShedRead()
-                	mode = Shed[1]
-                	period = Shed[2]
+			mode = Shed[1]
+	                period = Shed[2]
 			period = 3
 		except TypeError:
 			print "no previous entry"
@@ -206,7 +218,6 @@ def sensorCallback(channel):
            	val = (nowDate,mode,period,LastFlood,NextFlood)
                 SheD.execute(sql, val)
                 Farm.commit()
-
 def dbH2ORead():
         Farm = mysql.connector.connect(
                 host="localhost",
@@ -294,13 +305,13 @@ def dbDataRead():
                 print "no entry yet"
 
 def DataWrite():
-        Date = datetime.datetime.now()
+	TZ = timezone('America/Montreal')
+        Date = datetime.datetime.now(TZ)
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-        now = datetime.datetime.now()
-        now = now.strftime("%H:%M:%S")
-
-        main = GPIO.input(26)
-        Lights = GPIO.input(21)
+        now = datetime.datetime.now(TZ)
+        now = now.strftime("%Y-%m-%d %H:%M:%S")
+	main = GPIO.input(26)
+	Lights = GPIO.input(21)
 	APump = GPIO.input(20)
         ExFan = GPIO.input(16)
         WPump = GPIO.input(12)
@@ -327,8 +338,9 @@ def DataWrite():
 
 
 def Display():
-		now = datetime.datetime.now()
-                now = now.strftime("%Y-%m-%d %H:%M:%S")
+		TZ = timezone('America/Montreal')
+		now = datetime.datetime.now(TZ)
+		now = now.strftime("%Y-%m-%d %H:%M:%S") 
 		try:
 			H2O=dbH2ORead()
 			date = H2O[0]
@@ -390,9 +402,9 @@ def Display():
 
 		ValveD = GPIO.input(6)
                 if ValveD:
-                        ValveD = "Flood"
-                else:
                         ValveD = "Cycle"
+                else:
+                        ValveD = "Flood"
 
         	Pstatus = GPIO.input(12)
         	if Pstatus:
@@ -435,13 +447,14 @@ def Display():
 		return mode
 
 def Light(mode):
-        Date = datetime.datetime.now()
+	TZ = timezone('America/Montreal')
+	Date = datetime.datetime.now(TZ)
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-	now = datetime.datetime.now()
+	now = datetime.datetime.now(TZ)
         now = now.strftime("%H:%M:%S")
         if mode == "Vegetative":
-		DayStart = "08:00:00"
-       	        DayEnd = "24:00:00"
+		DayStart = "06:00:00"
+       	        DayEnd = "22:00:00"
         elif mode == "Flowering":
                	DayStart = "08:00:00"
                	DayEnd = "18:00:00"
@@ -454,13 +467,14 @@ def Light(mode):
 	LStatus = GPIO.input(21)
 
 def Flood():
-	Date = datetime.datetime.now()
+	TZ = timezone('America/Montreal')
+	Date = datetime.datetime.now(TZ)
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(TZ)
         now = now.strftime("%H:%M:%S")
 	try:
 		Shed=dbShedRead()
-#        	date = Shed[0]
+        	dateSince = Shed[0]
 #        	mode = Shed[1]
 #        	period = Shed[2]
                 LastFlood = Shed[3]
@@ -472,40 +486,43 @@ def Flood():
 		NextFlood = NextFlood.strftime('%H:%M:%S')
 		LastFlood = datetime.datetime.strptime(LastFlood, '%H:%M:%S')
 		LastFlood = LastFlood.strftime('%H:%M:%S')
+
 		TNext = datetime.datetime.strptime(NextFlood, '%H:%M:%S')
 		TLast = datetime.datetime.strptime(LastFlood, '%H:%M:%S')
-		
+#		DLast = datetime.datetime.strptime(LastFlood, '%H:%M:%S')
 		tdelta = TNext - TLast
+
 		tdelta = str(tdelta)
 		if "-1 day" in tdelta:
+			tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
+			tdelta = tdelta.strftime('%H:%M:%S')
+			print (str("-1 day Dt: " + tdelta))
 			tdelta = -1
 		else:
 			tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
 			tdelta = tdelta.strftime('%H:%M:%S')
-		#print ("gLast", LastFlood, type(LastFlood))
-		#print ("gnext", NextFlood, type(NextFlood))
-		#print ("gLast", TLast, type(TLast))
-                #print ("gnext", TNext, type(TNext))
-		print ("Tdela:", tdelta)
-		time.sleep(2)
+			print ("Same day Dt: " + tdelta)
+		if not GPIO.input(22) and not PStatus:
+			if now > NextFlood  and tdelta > 0:
+				if not GPIO.input(6):
+					Valve("f")
+		        	GPIO.output(26, GPIO.HIGH)
+                		GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
 
-		if now > NextFlood  and tdelta > 0 and PStatus == 0:
-			Valve("f")
-		        GPIO.output(26, GPIO.HIGH)
-                	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
 	except TypeError:
-		print ("f", LastFlood)
-		print ("f", NextFlood)
 		GPIO.output(26, GPIO.HIGH)
                 GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
                 PStatus = GPIO.input(12)
 		return PStatus
 def Valve(dir):
-	now = datetime.datetime.now()
+	TZ = timezone('America/Montreal')
+	now = datetime.datetime.now(TZ)
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	ValveS = GPIO.input(5)
 	ValveD = GPIO.input(6)
-	if dir == 'f':
+	print (dir, ValveS,ValveD)
+	time.sleep(5)
+	if dir == 'c':
 		if not ValveD:
 			print dir
 			GPIO.output(5, GPIO.LOW)
@@ -518,8 +535,8 @@ def Valve(dir):
 				DataWrite()
 			GPIO.output(5, GPIO.HIGH)
 
-        if dir == 'c':
-                if not ValveD:
+        if dir == 'f':
+                if ValveD:
                         print dir
                         GPIO.output(5, GPIO.LOW)
                         GPIO.output(6, GPIO.LOW)
@@ -550,3 +567,4 @@ if __name__ == "__main__":
                         # Reset GPIO settings
                         GPIO.cleanup()
                         os._exit(1)
+
