@@ -201,40 +201,46 @@ def sensorCallback(channel):
         	except:
                 	vol = 0
         	pass
+	CZero = 0
 	if vol > 0:
+		
 		GPIO.output(12, GPIO.LOW)
-                try:
-			Shed=dbShedRead()
-                	mode = Shed[1]
-                	period = Shed[2]
-			period = 3
-		except TypeError:
-			print "no previous entry"
-			period = 10
-			mode = 'Vegetative'
-			LastFlood= nowTime
-		LastFlood= nowDate
-		NextFlood = datetime.datetime.now() + datetime.timedelta(hours = int(period))
-                NextFlood = NextFlood.strftime("%y-%m-%d %H:%M:%S")
-		#print ("LastFlood",LastFlood)
-		#print ("NextFlood",NextFlood)
-		time.sleep(5)
-		Farm = mysql.connector.connect(
-	                host="localhost",
-        	        user="pi",
-        	        passwd="a-51d41e",
-        	        database="Farm"
-        	)
-        	SheD = Farm.cursor()
+		while GPIO.input(channel):
+#			print ("Hall sensor trigged")
+			while not GPIO.input(channel) and CZero < 5:
+				CZero = CZero + 1
+		print (CZero)
+		if CZero > 6:
+	                try:
+				Shed=dbShedRead()
+                		mode = Shed[1]
+                		period = Shed[2]
+				period = 3
+			except TypeError:
+				print "no previous entry"
+				period = 10
+				mode = 'Vegetative'
+				LastFlood= nowTime
+			LastFlood= nowDate
+			NextFlood = datetime.datetime.now() + datetime.timedelta(hours = int(period))
+	                NextFlood = NextFlood.strftime("%y-%m-%d %H:%M:%S")
+			Farm = mysql.connector.connect(
+		                host="localhost",
+        		        user="pi",
+        	        	passwd="a-51d41e",
+        	        	database="Farm"
+        		)
+        		SheD = Farm.cursor()
 #+---------------------+-----------+--------+-----------+-----------+
 #| date                | mode      | period | LastFlood | NextFlood |
 #+---------------------+-----------+--------+-----------+-----------+
 #| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
 #+---------------------+-----------+--------+-----------+-----------+
-        	sql = "insert INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-           	val = (nowDate,mode,period,LastFlood,NextFlood)
-                SheD.execute(sql, val)
-                Farm.commit()
+        		sql = "insert INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+           		val = (nowDate,mode,period,LastFlood,NextFlood)
+                	SheD.execute(sql, val)
+                	Farm.commit()
+			CZero = 0
 
 
 def dbH2ORead():
@@ -453,17 +459,16 @@ def Display():
 		print ""
 		print "status     : ", main
 		print "Lamp Status: ", LStatus
-		print "Pump Status: ", PStatus, "\tLastFlood:", LastFlood, "\tNextFlood:", NextFlood
-		print "Valve      : ",ValveS, "\tDir:", ValveD
+		print "Pump Status: ", PStatus, "     LastFlood:", LastFlood, "     NextFlood:", NextFlood
+		print "Valve      : ", ValveS, "      Dir:", ValveD
 		print "Air Pump   : ", AirPump
 		print "Exhaust Fan: ", ExFan
 
 		print ""
-		print "Chem analysis\tt=",Temp,"c\tpH:", pH, "\tEC:\t", EC
-		print "\t\t\t\t\t\tTDS:\t", TDS
-		print "\t\t\t\t\t\tS:\t", S
-		print "\t\t\t\t\t\tSG:\t", SG
-		time.sleep(5)
+		print "Chem analysis     t=",Temp,"c     pH:", pH, "     EC :    ", EC
+		print "                                                  TDS:    ", TDS
+		print "                                                  S  :    ", S
+		print "                                                  SG :    ", SG
 		return mode
 
 def Light(mode):
@@ -489,46 +494,20 @@ def Light(mode):
 def Flood():
 	TZ = timezone('America/Montreal')
 	Date = datetime.datetime.now(TZ)
-        Date = Date.strftime("%y-%m-%d %H:%M:%S")
+        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
         now = datetime.datetime.now(TZ)
         now = now.strftime("%H:%M:%S")
-
 	try:
 		Shed=dbShedRead()
         	dateSince = Shed[0]
-#        	mode = Shed[1]
-#        	period = Shed[2]
                 LastFlood = Shed[3]
                 NextFlood = Shed[4]
 		PStatus = GPIO.input(12)
 		LastFlood = str(LastFlood)
 		NextFlood = str(NextFlood)
-		#NextFlood = datetime.datetime.strptime(NextFlood, '%y-%m-%d %H:%M:%S')
-		#NextFlood = NextFlood.strftime('%y-%m-%d %H:%M:%S')
-		#LastFlood = datetime.datetime.strptime(LastFlood, '%y-%m-%d %H:%M:%S')
-		#LastFlood = LastFlood.strftime('%y-%m-%d %H:%M:%S')
-
-		#TNext = datetime.datetime.strptime(NextFlood, '%y-%m-%d %H:%M:%S')
-		#TLast = datetime.datetime.strptime(LastFlood, '%y-%m-%d %H:%M:%S')
-#		DLast = datetime.datetime.strptime(LastFlood, '%y-%m-%d %H:%M:%S')
-		#tdelta = Date - TLast
-
-		#tdelta = str(tdelta)
-		#if "-1 day" in tdelta:
-		#	tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
-		#	tdelta = tdelta.strftime('%H:%M:%S')
-		#	print (str("-1 day Dt: " + tdelta))
-                #	print (LastFlood)
-                #	print (NextFlood)
-		#	tdelta = -1
-		#else:
-		#	tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
-		#	tdelta = tdelta.strftime('%H:%M:%S')
-		#	print (LastFlood)
-		#	print (NextFlood)
-		#	print ("Same day Dt: " + tdelta)
-		if not GPIO.input(22) and not PStatus:
-			if now > NextFlood  and tdelta > 0:
+		if GPIO.input(22) and not PStatus:
+			print (Date , NextFlood,  GPIO.input(22), PStatus)
+			if Date > NextFlood: #  and tdelta > 0:
 				if not GPIO.input(6):
 					Valve("f")
 		        	GPIO.output(26, GPIO.HIGH)
@@ -545,8 +524,6 @@ def Valve(dir):
         now = now.strftime("%y-%m-%d %H:%M:%S")
 	ValveS = GPIO.input(5)
 	ValveD = GPIO.input(6)
-	print (dir, ValveS,ValveD)
-	time.sleep(5)
 	if dir == 'c':
 		if not ValveD:
 			print dir
