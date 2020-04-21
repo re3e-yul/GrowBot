@@ -107,14 +107,16 @@ def ReadSensors():
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
                         pH = Atlas(99,"r")
 
-
-                        ECs = Atlas(100,"r")
-                        ECs.split(',')
-                        Ec,TDS,S,SG = ECs.split(',')
-                        Ec = float (float(Ec) /1.0)
-                        TDS = float (float(TDS) / 1.0)
-                        S = float (float(S) / 1.0)
-			SG = float (float(SG) / 1.0)
+			try:
+	                        ECs = Atlas(100,"r")
+	                        ECs.split(',')
+	                        Ec,TDS,S,SG = ECs.split(',')
+	                        Ec = float (float(Ec) /1.0)
+	                        TDS = float (float(TDS) / 1.0)
+	                        S = float (float(S) * 1000)
+				SG = float (float(SG) / 1.0)
+			except ValueError:
+				pass
 			path = "/sys/bus/w1/devices/"
 			dir_list = os.listdir(path)
 			for path in dir_list:
@@ -147,8 +149,11 @@ def ReadSensors():
                         H2O = Farm.cursor()
                         sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s)"
                         val = (now,temp,pH,Ec,TDS,S,SG)
-                        H2O.execute(sql, val)
-                        Farm.commit()
+			try:
+	                        H2O.execute(sql, val)
+	                        Farm.commit()
+			except UnboundLocalError:
+				pass
                         H2O.close
                 return now,pH,Ec,TDS,S,SG
 
@@ -176,7 +181,7 @@ def sensorCallback(channel):
                 	vol = 0
         	pass
 	if vol > 0:
-		print ("vol:",vol)
+		print ("")
         	time.sleep(5)
 		GPIO.output(12, GPIO.LOW)
 		time.sleep(2)
@@ -206,8 +211,6 @@ def sensorCallback(channel):
 #+---------------------+-----------+--------+-----------+-----------+
         	sql = 'update Farm.Shed set LastFlood = %s ,NextFlood = %s where date = ( select max(date))'
 		val = (LastFlood,NextFlood)
-		#sql = "insert INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-           	#val = (nowDate,mode,period,LastFlood,NextFlood)
                 SheD.execute(sql, val)
                 Farm.commit()
 
@@ -421,7 +424,7 @@ def Display():
                         ExFan = "On"
                 else:
                         ExFan = "Off"
-		
+		os.system('clear')
 		print now
 		print ""
 		print "status     : ", main
@@ -460,36 +463,37 @@ def Light(mode):
 def Flood():
 	Date = datetime.datetime.now()
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-        now = datetime.datetime.now()
-        now = now.strftime("%H:%M:%S")
 	try:
 		Shed=dbShedRead()
-#        	date = Shed[0]
-#        	mode = Shed[1]
-#        	period = Shed[2]
-                LastFlood = Shed[3]
+                mode = Shed[2]
+		period = Shed[3]
                 NextFlood = Shed[4]
 		PStatus = GPIO.input(12)
-		LastFlood = str(LastFlood)
 		NextFlood = str(NextFlood)
-		#NextFlood = datetime.datetime.strptime(NextFlood, '%Y-%m-%d %H:%M:%S')
-		#NextFlood = NextFlood.strftime('%Y-%m-%d %H:%M:%S')
-		#LastFlood = datetime.datetime.strptime(LastFlood, '%Y-%m-%d %H:%M:%S')
-		#LastFlood = LastFlood.strftime('%Y-%m-%d %H:%M:%S')
-		#TNext = datetime.datetime.strptime(NextFlood, '%Y-%m-%d %H:%M:%S')
-		#TLast = datetime.datetime.strptime(LastFlood, '%Y-%m-%d %H:%M:%S')
-		
-#		tdelta = TNext - TLast
-#		tdelta = str(tdelta)
-#		if "-1 day" in tdelta:
-#			tdelta = -1
-#		else:
-#			tdelta = datetime.datetime.strptime(tdelta, '%H:%M:%S')
-#			tdelta = tdelta.strftime('%H:%M:%S')
+
 		if Date > NextFlood  and PStatus == 0:
 			Valve("f")
 		        GPIO.output(26, GPIO.HIGH)
                 	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
+
+	                Farm = mysql.connector.connect(
+	                        host="localhost",
+        	                user="pi",
+                	        passwd="a-51d41e",
+                        	database="Farm"
+                	)
+                	SheD = Farm.cursor()
+#+---------------------+-----------+--------+-----------+-----------+
+#| date                | mode      | period | LastFlood | NextFlood |
+#+---------------------+-----------+--------+-----------+-----------+
+#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
+#+---------------------+-----------+--------+-----------+-----------+
+                	sql = "insert INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+                	val = (Date,mode,period,Date,NextFlood)
+                	SheD.execute(sql, val)
+                	Farm.commit()
+
+
 	except TypeError:
 		GPIO.output(26, GPIO.HIGH)
                 GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
@@ -534,7 +538,7 @@ if __name__ == "__main__":
 			thread = ChemSensors(ReadSensors)
 			thread.start()
 		try:
-			os.system('clear')
+#			os.system('clear')
 			mode = Display()
 			Light(mode)
 			Flood()
