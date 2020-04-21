@@ -105,7 +105,11 @@ def ReadSensors():
                 while True:
                         now = datetime.datetime.now()
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
-                        pH = Atlas(99,"r")
+                        try:
+				pH = Atlas(99,"r")
+			except ValueError:
+				pH = Atlas(99,"r")
+				pass
 
 			try:
 	                        ECs = Atlas(100,"r")
@@ -116,6 +120,13 @@ def ReadSensors():
 	                        S = float (float(S) * 1000)
 				SG = float (float(SG) / 1.0)
 			except ValueError:
+			    	ECs = Atlas(100,"r")
+                                ECs.split(',')
+                                Ec,TDS,S,SG = ECs.split(',')
+                                Ec = float (float(Ec) /1.0)
+                                TDS = float (float(TDS) / 1.0)
+                                S = float (float(S) * 1000)
+                                SG = float (float(SG) / 1.0)
 				pass
 			path = "/sys/bus/w1/devices/"
 			dir_list = os.listdir(path)
@@ -209,8 +220,8 @@ def sensorCallback(channel):
 #+---------------------+-----------+--------+-----------+-----------+
 #| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
 #+---------------------+-----------+--------+-----------+-----------+
-        	sql = 'update Farm.Shed set LastFlood = %s ,NextFlood = %s where date = ( select max(date))'
-		val = (LastFlood,NextFlood)
+        	sql = 'update Farm.Shed set mode = %s ,period = %s, LastFlood = %s ,NextFlood = %s where date = ( select max(date))'
+		val = (mode,period,LastFlood,NextFlood)
                 SheD.execute(sql, val)
                 Farm.commit()
 
