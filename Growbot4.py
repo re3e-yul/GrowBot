@@ -108,7 +108,7 @@ def ReadSensors():
                         try:
 				pH = Atlas(99,"r")
 			except ValueError:
-				pH = Atlas(99,"r")
+#				pH = Atlas(99,"r")
 				pass
 
 			try:
@@ -166,7 +166,9 @@ def ReadSensors():
 			except UnboundLocalError:
 				pass
                         H2O.close
-                return now,pH,Ec,TDS,S,SG
+		print (now,Temp,pH,Ec,TDS,S,SG)
+		time.sleep(5)
+                return now,Temp,pH,Ec,TDS,S,SG
 
 
 def sensorCallback(channel):
@@ -191,16 +193,15 @@ def sensorCallback(channel):
         	except:
                 	vol = 0
         	pass
+	print ("vol", vol)
+	time.sleep(3)
 	if vol > 0:
-		print ("")
-        	time.sleep(5)
 		GPIO.output(12, GPIO.LOW)
-		time.sleep(2)
+	else:
                 try:
 			Shed=dbShedRead()
                 	mode = Shed[1]
                 	period = Shed[2]
-			period = 3
 		except TypeError:
 			print "no previous entry"
 			period = 10
@@ -208,6 +209,7 @@ def sensorCallback(channel):
 		LastFlood= nowDate
 		NextFlood = datetime.datetime.now() + datetime.timedelta(hours = int(period))
                 NextFlood = NextFlood.strftime("%Y-%m-%d %H:%M:%S")
+		print ("LastFlood", LastFlood, "NextFlood", NextFlood)
 		Farm = mysql.connector.connect(
 	                host="localhost",
         	        user="pi",
@@ -476,8 +478,8 @@ def Flood():
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
 	try:
 		Shed=dbShedRead()
-                mode = Shed[2]
-		period = Shed[3]
+                mode = Shed[1]
+		period = Shed[2]
                 NextFlood = Shed[4]
 		PStatus = GPIO.input(12)
 		NextFlood = str(NextFlood)
@@ -503,7 +505,7 @@ def Flood():
                 	val = (Date,mode,period,Date,NextFlood)
                 	SheD.execute(sql, val)
                 	Farm.commit()
-
+			time.sleep(2)
 
 	except TypeError:
 		GPIO.output(26, GPIO.HIGH)
