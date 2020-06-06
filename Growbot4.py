@@ -171,8 +171,8 @@ def sensorCallback(channel):
         LastFlood = Shed[3]
 	SinceLast = 0
 	SinceLast = now-LastFlood
+	SinceLastMin = SinceLast.seconds / 60
 	print "SinceLast:", SinceLast
-#	time.sleep(300)
 	nowDate = now.strftime("%Y-%m-%d %H:%M:%S")
 	nowTime = now.strftime("%H:%M:%S")
 	vol = 0
@@ -201,24 +201,27 @@ def sensorCallback(channel):
       	        LastFlood= nowDate
                 NextFlood = now + datetime.timedelta(hours = int(period))
                 Nextflood = NextFlood.strftime("%Y-%m-%d %H:%M:%S")
-                Farm = mysql.connector.connect(
-                	host="localhost",
-                        user="pi",
-                        passwd="a-51d41e",
-                        database="Farm"
-               	)
-               	SheD = Farm.cursor()
+		print SinceLast
+                if SinceLastMin > 60:
+			Farm = mysql.connector.connect(
+        	        	host="localhost",
+                	        user="pi",
+                        	passwd="a-51d41e",
+	                        database="Farm"
+        	       	)
+               		SheD = Farm.cursor()
 #+---------------------+-----------+--------+-----------+-----------+
 #| date                | mode      | period | LastFlood | NextFlood |
 #+---------------------+-----------+--------+-----------+-----------+
 #| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
 #+---------------------+-----------+--------+-----------+-----------+
-#               sql = 'update Farm.Shed set mode = %s ,period = %s, LastFlood = %s ,NextFlood = %s where date = ( select max(date))'
-		sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-                val = (nowDate,mode,period,LastFlood,Nextflood)
-                SheD.execute(sql, val)
-		SheD.close
-
+		
+			sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+                	val = (nowDate,mode,period,LastFlood,Nextflood)
+                	SheD.execute(sql, val)
+			SheD.close
+			Farm.commit()
+			time.sleep(2)
 #+---------------------+-------+--------+-----------+----------+----------+--------+----------+
 #| date                | Temp  | pH     | EC        | TDS      | S        | SG     | FloodVol |
 #+---------------------+-------+--------+-----------+----------+----------+--------+----------+
