@@ -167,24 +167,29 @@ def sensorCallback(channel):
   	global vol
   	global stat
 	now = dt.now()
-#	now = datetime.now()
+        Shed=dbShedRead()
+        LastFlood = Shed[3]
+	SinceLast = 0
+	SinceLast = now-LastFlood
+	print "SinceLast:", SinceLast
+#	time.sleep(300)
 	nowDate = now.strftime("%Y-%m-%d %H:%M:%S")
 	nowTime = now.strftime("%H:%M:%S")
 	vol = 0
   	if GPIO.input(channel):
-#        	try:
-#                	vol = vol+1
-#
-#        	except:
-#                	vol = 0
-#        	pass
-#  	else:
-#        	try:
-#                	vol = vol+1
-#        	except:
-#                	vol = 0
-#        	pass
-#		if vol > 0:
+        	try:
+                	vol = vol+1
+
+        	except:
+                	vol = 0
+        	pass
+  	else:
+        	try:
+                	vol = vol+1
+        	except:
+                	vol = 0
+        	pass
+	if vol > 0:
 		GPIO.output(12, GPIO.LOW)
                 try:
                         Shed=dbShedRead()
@@ -449,7 +454,7 @@ def Display():
                         ExFan = "On"
                 else:
                         ExFan = "Off"
-		#os.system('clear')
+		os.system('clear')
 		print "#####################################################################################"
 		print now
 		print ""
@@ -495,20 +500,16 @@ def Flood():
 	Shed=dbShedRead()
        	NextFlood = Shed[4]
 	PStatus = GPIO.input(12)
-#	NextFlood = datetime.strptime(NextFlood, '%Y-%m-%d  %H:%M:%S')
 	Date = datetime.strptime(Date, '%Y-%m-%d  %H:%M:%S')
-#	print type(Date),Date,type(NextFlood),NextFlood
-	print Date, NextFlood, Date > NextFlood
-	if Date > NextFlood: 
-		print type(Date),Date,type(NextFlood),NextFlood, PStatus, not Hall
-	        time.sleep(5)
+#	print Date, NextFlood, Date > NextFlood
+	if Date > NextFlood and not PStatus: 
 		Valve("f")
 	        GPIO.output(26, GPIO.HIGH)
-#               	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
+               	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
 		DataWrite()
-	else:
-		print "Off"
-		GPIO.output(12, GPIO.LOW)
+#	else:
+#		print "Off"
+#		GPIO.output(12, GPIO.LOW)
         PStatus = GPIO.input(12)
 	return PStatus
 
