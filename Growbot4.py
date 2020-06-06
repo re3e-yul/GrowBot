@@ -225,7 +225,7 @@ def sensorCallback(channel):
 		#+---------------------+-------+--------+-----------+----------+----------+--------+----------+			
 
 		H2O=dbH2ORead()
-		Date = H2P[0]
+		Date = H2O[0]
 		Temp = H2O[1]
 		pH = H2O[2]
 		EC = H2O[3]
@@ -234,7 +234,12 @@ def sensorCallback(channel):
               	SG = H2O[6]
       	        Floodvol = H2O[7]
                 Floodvol = Floodvol-1
-
+		Farm = mysql.connector.connect(
+                                host="localhost",
+                                user="pi",
+                                passwd="a-51d41e",
+                                database="Farm"
+                )
                 H2O = Farm.cursor()
                 sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
@@ -514,8 +519,10 @@ def Flood():
 	PStatus = GPIO.input(12)
 	Date = datetime.strptime(Date, '%Y-%m-%d  %H:%M:%S')
 #	print Date, NextFlood, Date > NextFlood
+	Vstatus= GPIO.input(6)
 	if Date > NextFlood and not PStatus: 
-		Valve("f")
+		if Vstatus:
+			Valve("f")
 	        GPIO.output(26, GPIO.HIGH)
                	GPIO.output(12, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
 		DataWrite()
@@ -532,7 +539,7 @@ def Valve(dir):
 	ValveS = GPIO.input(5)
 	ValveD = GPIO.input(6)
 	if dir == 'c':
-		if not ValveD:
+		if ValveD:
 			GPIO.output(5, GPIO.LOW)
 			GPIO.output(6, GPIO.HIGH)
 			t_end = time.time() + 13
