@@ -172,7 +172,6 @@ def sensorCallback(channel):
 	SinceLast = 0
 	SinceLast = now-LastFlood
 	SinceLastMin = SinceLast.seconds / 60
-	print "SinceLast:", SinceLast
 	nowDate = now.strftime("%Y-%m-%d %H:%M:%S")
 	nowTime = now.strftime("%H:%M:%S")
 	vol = 0
@@ -201,8 +200,7 @@ def sensorCallback(channel):
       	        LastFlood= nowDate
                 NextFlood = now + datetime.timedelta(hours = int(period))
                 Nextflood = NextFlood.strftime("%Y-%m-%d %H:%M:%S")
-		print SinceLast
-                if SinceLastMin > 60:
+                if SinceLastMin > 5:
 			Farm = mysql.connector.connect(
         	        	host="localhost",
                 	        user="pi",
@@ -210,11 +208,11 @@ def sensorCallback(channel):
 	                        database="Farm"
         	       	)
                		SheD = Farm.cursor()
-#+---------------------+-----------+--------+-----------+-----------+
-#| date                | mode      | period | LastFlood | NextFlood |
-#+---------------------+-----------+--------+-----------+-----------+
-#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
-#+---------------------+-----------+--------+-----------+-----------+
+				#+---------------------+-----------+--------+-----------+-----------+
+				#| date                | mode      | period | LastFlood | NextFlood |
+				#+---------------------+-----------+--------+-----------+-----------+
+				#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
+				#+---------------------+-----------+--------+-----------+-----------+
 		
 			sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
                 	val = (nowDate,mode,period,LastFlood,Nextflood)
@@ -222,18 +220,21 @@ def sensorCallback(channel):
 			SheD.close
 			Farm.commit()
 			time.sleep(2)
-#+---------------------+-------+--------+-----------+----------+----------+--------+----------+
-#| date                | Temp  | pH     | EC        | TDS      | S        | SG     | FloodVol |
-#+---------------------+-------+--------+-----------+----------+----------+--------+----------+
+		#+---------------------+-------+--------+-----------+----------+----------+--------+----------+
+		#| date                | Temp  | pH     | EC        | TDS      | S        | SG     | FloodVol |
+		#+---------------------+-------+--------+-----------+----------+----------+--------+----------+			
+
 		H2O=dbH2ORead()
-                Temp = H2O[1]
-                pH = H2O[2]
-               	EC = H2O[3]
-       	        TDS = H2O[4]
-                S = H2O[5]
-               	SG = H2O[6]
-       	        Floodvol = H2O[7]
+		Date = H2P[0]
+		Temp = H2O[1]
+		pH = H2O[2]
+		EC = H2O[3]
+		TDS = H2O[4]
+		S = H2O[5]
+              	SG = H2O[6]
+      	        Floodvol = H2O[7]
                 Floodvol = Floodvol-1
+
                 H2O = Farm.cursor()
                 sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
                 val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
@@ -457,23 +458,31 @@ def Display():
                         ExFan = "On"
                 else:
                         ExFan = "Off"
+		if mode == "Vegetative":
+			DayStart = "06:00:00"
+			DayEnd = "22:00:00"
+		elif mode == "Flowering":
+			DayStart = "08:00:00"
+			DayEnd = "18:00:00"
+		LastFlood = str(LastFlood)
+		NextFlood = str(NextFlood)
 		os.system('clear')
-		print "#####################################################################################"
+		print "################################################################################################################"
 		print now
 		print ""
-		print "status     : ", main
-		print "Lamp Status: ", LStatus, "      Mode:     ",mode
-		print "Pump Status: ", PStatus, "     LastFlood:", LastFlood, "     NextFlood:", NextFlood
-		print "Valve      : ",ValveS, "     Dir:", ValveD
-		print "Air Pump   : ", AirPump
-		print "Exhaust Fan: ", ExFan
+		print ('{:<3s} {:>10s}'.format('status:', main))
+		print ('{:<3s} {:>4s} {:>11s} {:>3s} {:>33s} {:>4s} {:>32s} {:>4s}'.format('Lamp Status: ', LStatus, 'Mode:',mode, 'DayStart', DayStart, 'DayEnd',DayEnd))
+		print ('{:<3s} {:>5s} {:>15s} {:>4s} {:>20s} {:>4s} {:>20s} {:<3d}'.format('Pump Status: ', PStatus,'LastFlood:', LastFlood,'NextFlood:', NextFlood,'Period:', period))
+		print ('{:<3s} {:>11s}'.format('Valve: ',ValveS, 'Dir:', ValveD))
+		print ('{:<3s} {:>9s}'.format('Air Pump:', AirPump))
+		print ('{:<3s} {:>5s}'.format('Exhaust Fan:', ExFan))
 		print ""
-		print "Chem analysis     t=",Temp,"c     pH:", pH, "        EC:     ", EC
-		print "                                                  TDS:     ", TDS
-		print "Bed level:",BedVol,"Hall:", Hall, "                               S:     ", S
-		print "                                                   SG:     ", SG
+		print ('{:<1s} {:>12s}  {:<1s} {:<1s} {:>6s} {:>4s} {:>4s} {:>4s}'.format('Chem analysis','t=',str(Temp),'c','pH:', str(pH),'EC:', str(EC)))
+		print ('{:>41s} {:>3s}'.format('TDS:', str(TDS)))
+		print ('{:<3s} {:<3d}  {:>4s} {:<3d} {:>15s} {:>4s}'.format('Bed level:',BedVol,'Hall:', Hall,'S:', str(S)))
+		print ('{:>41s} {:<3s}'.format('SG:', str(SG)))
 		print ""
-		print "#####################################################################################"
+		print "################################################################################################################"
 		return mode
 
 def Light(mode):
