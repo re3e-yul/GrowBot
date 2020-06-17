@@ -188,66 +188,112 @@ def sensorCallback(channel):
         	except:
                 	vol = 0
         	pass
+	H2O=dbH2ORead()
+        Date = H2O[0]
+	Temp = H2O[1]
+	pH = H2O[2]
+	EC = H2O[3]
+	TDS = H2O[4]
+	S = H2O[5]
+	SG = H2O[6]
+	Floodvol = H2O[7]
+
 	if vol > 0:
 		GPIO.output(12, GPIO.LOW)
-                try:
-                        Shed=dbShedRead()
+       	        try:
+               	        Shed=dbShedRead()
                         mode = Shed[1]
-                        period = Shed[2]
-                except TypeError:
+       	                period = Shed[2]
+               	except TypeError:
 			mode = 'Vegetative'
                         period = 10
-      	        LastFlood= nowDate
-                NextFlood = now + datetime.timedelta(hours = int(period))
+     		        LastFlood= nowDate
+               	NextFlood = now + datetime.timedelta(hours = int(period))
                 Nextflood = NextFlood.strftime("%Y-%m-%d %H:%M:%S")
-                if SinceLastMin > 5:
-			Farm = mysql.connector.connect(
-        	        	host="localhost",
-                	        user="pi",
-                        	passwd="a-51d41e",
-	                        database="Farm"
-        	       	)
-               		SheD = Farm.cursor()
-				#+---------------------+-----------+--------+-----------+-----------+
-				#| date                | mode      | period | LastFlood | NextFlood |
-				#+---------------------+-----------+--------+-----------+-----------+
-				#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
-				#+---------------------+-----------+--------+-----------+-----------+
-		
+                Floodvol = Floodvol-1
+	        Date = dt.now()
+        	Date = Date.strftime("%Y-%m-%d %H:%M:%S")
+	        now = dt.now()
+        	now = now.strftime("%H:%M:%S")
+
+	        main = GPIO.input(26)
+	        Lights = GPIO.input(21)
+	        APump = GPIO.input(20)
+	        ExFan = GPIO.input(16)
+	        WPump = GPIO.input(12)
+        	ValveS = GPIO.input(5)
+	        ValveD = GPIO.input(6)
+		Hall = 1
+        	Farm = mysql.connector.connect(
+                	host="localhost",
+                	user="pi",
+                	passwd="a-51d41e",
+                	database="Farm"
+        	)
+
+        	SheD = Farm.cursor()
+        	sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD,Hall) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        	val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,Hall)
+        	SheD.execute(sql, val)
+		SheD.close
+		Farm.commit()
+#        	Farm = mysql.connector.connect(
+#                  	host="localhost",
+#                        user="pi",
+#                        passwd="a-51d41e",
+#                        database="Farm"
+#                )
+               	H2O = Farm.cursor()
+                sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
+                H2O.execute(sql, val)
+                H2O.close
+		Farm.commit()
+       	        if SinceLastMin > 45:
+#			Farm = mysql.connector.connect(
+#       	        		host="localhost",
+#               	        	user="pi",
+#                        	passwd="a-51d41e",
+#	                        database="Farm"
+#       		       	)
+      			SheD = Farm.cursor()
+			#+---------------------+-----------+--------+-----------+-----------+
+			#| date                | mode      | period | LastFlood | NextFlood |
+			#+---------------------+-----------+--------+-----------+-----------+
+			#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
+			#+---------------------+-----------+--------+-----------+-----------+
+	
 			sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-                	val = (nowDate,mode,period,LastFlood,Nextflood)
-                	SheD.execute(sql, val)
+       	        	val = (nowDate,mode,period,nowDate,Nextflood)
+               		SheD.execute(sql, val)
 			SheD.close
 			Farm.commit()
 			time.sleep(2)
-		#+---------------------+-------+--------+-----------+----------+----------+--------+----------+
-		#| date                | Temp  | pH     | EC        | TDS      | S        | SG     | FloodVol |
-		#+---------------------+-------+--------+-----------+----------+----------+--------+----------+			
 
-		H2O=dbH2ORead()
-		Date = H2O[0]
-		Temp = H2O[1]
-		pH = H2O[2]
-		EC = H2O[3]
-		TDS = H2O[4]
-		S = H2O[5]
-              	SG = H2O[6]
-      	        Floodvol = H2O[7]
-                Floodvol = Floodvol-1
-		Farm = mysql.connector.connect(
-                                host="localhost",
-                                user="pi",
-                                passwd="a-51d41e",
-                                database="Farm"
+	else:
+                main = GPIO.input(26)
+                Lights = GPIO.input(21)
+                APump = GPIO.input(20)
+                ExFan = GPIO.input(16)
+                WPump = GPIO.input(12)
+                ValveS = GPIO.input(5)
+                ValveD = GPIO.input(6)
+                Hall = 0
+                Farm = mysql.connector.connect(
+                        host="localhost",
+                        user="pi",
+                        passwd="a-51d41e",
+                        database="Farm"
                 )
-                H2O = Farm.cursor()
-                sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
-	        H2O.execute(sql, val)
-                Farm.commit()
-                H2O.close
-		DataWrite()
 
+                SheD = Farm.cursor()
+                sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD,Hall) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,Hall)
+                SheD.execute(sql, val)
+                SheD.close
+                Farm.commit()
+
+		
 def dbH2ORead():
         Farm = mysql.connector.connect(
                 host="localhost",
@@ -350,6 +396,8 @@ def DataWrite():
         WPump = GPIO.input(12)
         ValveS = GPIO.input(5)
         ValveD = GPIO.input(6)
+        Act=dbDataRead()
+        Hall = Act[8]
 	Farm = mysql.connector.connect(
                 host="localhost",
                 user="pi",
@@ -364,11 +412,10 @@ def DataWrite():
         # +---------------------+------+--------+-------+---------+-----------+------+------+
         # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
         # +---------------------+------+--------+-------+---------+-----------+------+------+
-        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD)
+        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD,Hall) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,Hall)
         SheD.execute(sql, val)
         Farm.commit()
-
 
 def Display():
 		now = datetime.now()
@@ -507,6 +554,7 @@ def Light(mode):
 		DataWrite()
         else:
                	GPIO.output(21, GPIO.LOW)
+		DataWrite()
 	LStatus = GPIO.input(21)
 	
 def Flood():
@@ -538,7 +586,7 @@ def Valve(dir):
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	ValveS = GPIO.input(5)
 	ValveD = GPIO.input(6)
-	if dir == 'c':
+	if dir == 'f':
 		if ValveD:
 			GPIO.output(5, GPIO.LOW)
 			GPIO.output(6, GPIO.HIGH)
@@ -549,7 +597,7 @@ def Valve(dir):
 				DataWrite()
 			GPIO.output(5, GPIO.HIGH)
 			DataWrite()
-        if dir == 'f':
+        if dir == 'c':
                 if not ValveD:
                         GPIO.output(5, GPIO.LOW)
                         GPIO.output(6, GPIO.LOW)

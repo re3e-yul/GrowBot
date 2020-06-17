@@ -112,7 +112,6 @@ def ReadSensors():
 					BedVol = BedVol + 1
 				except ValueError:
 					BedVol = 0
-			
 			pH = 0
 			while pH == 0:
 				pH = Atlas(99,"r")
@@ -199,7 +198,7 @@ def sensorCallback(channel):
 	SG = H2O[6]
 	Floodvol = H2O[7]
 
-	if vol > 0:
+	if vol > 0 :
 		GPIO.output(12, GPIO.LOW)
        	        try:
                	        Shed=dbShedRead()
@@ -211,6 +210,21 @@ def sensorCallback(channel):
      		        LastFlood= nowDate
                	NextFlood = now + datetime.timedelta(hours = int(period))
                 Nextflood = NextFlood.strftime("%Y-%m-%d %H:%M:%S")
+                Floodvol = Floodvol-1
+                Farm = mysql.connector.connect(
+                                host="localhost",
+                                user="pi",
+                                passwd="a-51d41e",
+                                database="Farm"
+                )
+                H2O = Farm.cursor()
+                sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
+                H2O.execute(sql, val)
+                Farm.commit()
+                H2O.close
+                DataWrite()
+
        	        if SinceLastMin > 5:
 			Farm = mysql.connector.connect(
        	        		host="localhost",
@@ -231,23 +245,6 @@ def sensorCallback(channel):
 			SheD.close
 			Farm.commit()
 			time.sleep(2)
-			#+---------------------+-------+--------+-----------+----------+----------+--------+----------+
-			#| date                | Temp  | pH     | EC        | TDS      | S        | SG     | FloodVol |
-			#+---------------------+-------+--------+-----------+----------+----------+--------+----------+			
-                Floodvol = Floodvol-1
-		Farm = mysql.connector.connect(
-               	                host="localhost",
-                       	        user="pi",
-                               	passwd="a-51d41e",
-                                database="Farm"
-                )
-       	        H2O = Farm.cursor()
-               	sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                val = (nowDate,Temp,pH,EC,TDS,S,SG,Floodvol)
-	        H2O.execute(sql, val)
-               	Farm.commit()
-                H2O.close
-		DataWrite()
 
 def dbH2ORead():
         Farm = mysql.connector.connect(
