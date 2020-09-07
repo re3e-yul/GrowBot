@@ -1,0 +1,53 @@
+#! /bin/sh
+valve=$1
+raspi-gpio set 5 op
+raspi-gpio set 6 op
+
+Master=$(raspi-gpio get 5 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+Dir=$(raspi-gpio get 6 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+
+case $valve in
+f|F|-f|-F|--feed)
+	if [ $Dir -eq "1" ]
+        then
+		#echo $valve $Dir
+		raspi-gpio set 5 dl
+        	sleep 0.5
+		raspi-gpio set 6 dl
+		sleep 12
+	else
+		#echo $valve $Dir
+		raspi-gpio set 5 dh
+	fi
+  ;;
+c|C|-c|-C|--cycle)
+	if [ $Dir -eq "0" ]
+        then
+		#echo $valve $Dir
+		raspi-gpio set 5 dl
+		sleep 0.5
+		raspi-gpio set 6 dh
+		sleep 12
+	else
+		#echo $valve $Dir
+		raspi-gpio set 5 dh
+	fi
+  ;;
+esac
+gpio -g write 5 1
+Master=$(raspi-gpio get 5 | awk -F" " '{print $3}' | awk -F"=" '{print $2}') 
+Dir=$(raspi-gpio get 6 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+
+if [ $Master -eq "0" ]
+then 
+	Master="On"
+else 
+	Master="Off"
+fi
+if [ $Dir -eq "0" ]
+then 
+        Dir="feed"
+else 
+        Dir="cycle"
+fi
+echo "Power(5): "$Master "  Dir(6):" $Dir

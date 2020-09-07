@@ -1,31 +1,30 @@
 #! /bin/bash
-
-gpio -g mode 26 out
-gpio -g mode 12 out
-main=$(gpio -g read 26)
-light=$(gpio -g read 21)
-pump=$(gpio -g read 12)
-fan=$(gpio -g read 16)
-bubl=$(gpio -g read 20)
+raspi-gpio set 26 op
+raspi-gpio set 21 op
+main=$(raspi-gpio get 26 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+light=$(raspi-gpio get 12 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+pump=$(raspi-gpio get 21 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+fan=$(raspi-gpio get 16 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+bubl=$(raspi-gpio get 20 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
 
 
 if [[ $pump -eq 0 ]]
 then
 	if [[ $main -eq 0 ]]
 	then
-        	gpio -g write 26 1
+		raspi-gpio set 26 dh
 	fi
-	gpio -g write 12 1
+	raspi-gpio set 21 dh
 elif [[ $pump -eq 1 ]]
 then
-	gpio -g write 12 0
+	raspi-gpio set 21 dl
 	if [[ $light -eq 0 && $fan -eq 0 && $fbubl -eq 0 ]]
 	then
-		gpio -g write 26 0
+		raspi-gpio set 26 dl
 	fi
 fi
 sleep 0.5
-main=$(gpio -g read 26)
-pump=$(gpio -g read 12)
+main=$(raspi-gpio get 26 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+pump=$(raspi-gpio get 21 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
 echo -e "Main AC relay: " $main
 echo -e "pump AC relay: "$pump
