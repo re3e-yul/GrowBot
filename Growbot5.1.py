@@ -43,11 +43,11 @@ def HallSensor(channel):
     timestamp = time.time()
     stamp = datetime.datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
     now = datetime.datetime.now()
-    Shed=dbShedRead()
+    Shed=dbRead('Shed')
     mode =  Shed[1]
     period = Shed[2]
     LastFlood = Shed[3]
-    H2O=dbH2ORead()
+    H2O=dbRead('H2O')
     Temp = H2O[1]
     pH = H2O[2]
     EC = H2O[3]
@@ -172,7 +172,7 @@ def ReadSensors():
                 while True:
                         now = datetime.datetime.now()
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
-			Shed=dbH2ORead()
+			Shed=dbRead('H2O')
 			BedVol = Shed[7]
 			if GPIO.input(21) and not GPIO.input(6):
 				try:
@@ -232,7 +232,7 @@ def ReadSensors():
 ###########################################################################################################
 
 def Light():
-	Shed=dbShedRead()
+	Shed=dbRead('Shed')
 	mode = Shed[1]
 #        Date = datetime.datetime.now()
 #        Date = Date.strftime("%Y-%m-%d %H:%M:%S")
@@ -258,9 +258,9 @@ def Light():
 def Flood():
 	Date = datetime.datetime.now()
 	Date = Date.strftime("%Y-%m-%d %H:%M:%S")
-	Act=dbDataRead()
+	Act=dbRead('Data')
        	Hall = Act[8]
-	Shed=dbShedRead()
+	Shed=dbRead('Shed')
        	NextFlood = Shed[4]
 	PStatus = GPIO.input(21)
 	Date = datetime.datetime.strptime(Date, '%Y-%m-%d  %H:%M:%S')
@@ -308,7 +308,7 @@ def Valve(dir):
 
 ##########################################################################################
 
-def dbH2ORead():
+def dbRead(table):
         Farm = mysql.connector.connect(
                 host="localhost",
 
@@ -316,95 +316,55 @@ def dbH2ORead():
                 passwd="a-51d41e",
                 database="Farm"
         )
-        #global mycursor
-        h2ocursor = Farm.cursor()
-        h2ocursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
-        myresult = h2ocursor.fetchone()
-	h2ocursor.close
-#+---------------------+-------+------+------+------+------+
-#| date                | pH    | EC   | TDS  | S    | SG   |
-#+---------------------+-------+------+------+------+------+
-#| 2019-12-20 09:56:04 | 6.800 |  100 |  100 |  100 |    1 |
-#+---------------------+-------+------+------+------+------+
-	try:
-	        date = myresult[0]
-		Temp = myresult[1]
-		pH = myresult[2]
-		EC = myresult[3]
-		TDS = myresult[4]
-		S = myresult[5]
-		SG = myresult[6]
-		BedVol = myresult[7]
-		return date, Temp, pH, EC, TDS, S, SG, BedVol
-	except TypeError:
-		print "no entry yet"
+        cursor = Farm.cursor()
+        if table == "H2O":
+	        cursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
+        	myresult = cursor.fetchone()
+		cursor.close
+		try:
+		        date = myresult[0]
+			Temp = myresult[1]
+			pH = myresult[2]
+			EC = myresult[3]
+			TDS = myresult[4]
+			S = myresult[5]
+			SG = myresult[6]
+			BedVol = myresult[7]
+			return date, Temp, pH, EC, TDS, S, SG, BedVol
+		except TypeError:
+			pass
+	if table == "Shed":
+	        cursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
+        	myresult = cursor.fetchone()
+        	cursor.close
+	        try:
+	                date = myresult[0]
+	                mode = myresult[1]
+	                period = myresult[2]
+	                LastFlood = myresult[3]
+	                NextFlood = myresult[4]
+	                return date, mode, period, LastFlood, NextFlood
+	        except TypeError:
+                	pass
+	if table == "Data":
+        	cursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
+        	myresult = cursor.fetchone()
+	        cursor.close
+		try:
+			date = myresult[0]
+			main = myresult[1]
+			lights = myresult[2]
+			ExFan = myresult[3]
+			AirPump = myresult[4]
+			WaterPump = myresult[5]
+			ValveS = myresult[6]
+			ValveS = myresult[7]
+			Hall = myresult[8]
+			return date, main, lights, ExFan, AirPump, WaterPump, ValveS, ValveS, Hall
+	        except TypeError:
+                	pass
 
-#####################################################################################
-
-def dbShedRead():
-        Farm = mysql.connector.connect(
-                host="localhost",
-                user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-        )
-        #global mycursor
-        SheDcursor = Farm.cursor()
-        SheDcursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
-        myresult = SheDcursor.fetchone()
-        SheDcursor.close
-#select * from Shed;
-#+---------------------+-----------+--------+-----------+-----------+
-#| date                | mode      | period | LastFlood | NextFlood |
-#+---------------------+-----------+--------+-----------+-----------+
-#| 2019-12-28 09:56:04 | flowering |     90 | 09:56:04  | 09:56:04  |
-#+---------------------+-----------+--------+-----------+-----------+
-        try:
-                date = myresult[0]
-                mode = myresult[1]
-                period = myresult[2]
-                LastFlood = myresult[3]
-                NextFlood = myresult[4]
-                return date, mode, period, LastFlood, NextFlood
-        except TypeError:
-                print "no entry yet"
-
-###########################################################################################
-
-def dbDataRead():
-        Farm = mysql.connector.connect(
-                host="localhost",
-                user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-        )
-        #global mycursor
-        SheDcursor = Farm.cursor()
-        SheDcursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
-        myresult = SheDcursor.fetchone()
-        SheDcursor.close
-#select * from farmdata order by date desc limit 1;
-#+---------------------+------+--------+-------+---------+-----------+------+------+------+
-#| date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD | Hall |
-#+---------------------+------+--------+-------+---------+-----------+------+------+------+
-#| 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
-#+---------------------+------+--------+-------+---------+-----------+------+------+
-	try:
-		date = myresult[0]
-		main = myresult[1]
-		lights = myresult[2]
-		ExFan = myresult[3]
-		AirPump = myresult[4]
-		WaterPump = myresult[5]
-		ValveS = myresult[6]
-		ValveS = myresult[7]
-		Hall = myresult[8]
-		return date, main, lights, ExFan, AirPump, WaterPump, ValveS, ValveS, Hall
-        except TypeError:
-                print "no entry yet"
-
-###################################################################################################
-
+##########################################################################################
 def DataWrite():
         Date = datetime.datetime.now()
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
@@ -418,7 +378,7 @@ def DataWrite():
         WPump = GPIO.input(21)
         ValveS = GPIO.input(5)
         ValveD = GPIO.input(6)
-        Act=dbDataRead()
+        Act=dbRead('Data')
         Hall = Act[8]
 	Farm = mysql.connector.connect(
                 host="localhost",
