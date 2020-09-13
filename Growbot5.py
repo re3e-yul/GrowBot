@@ -20,7 +20,7 @@ def main():
   # messages.
 
   # Get initial reading
-  HallSensor(22)
+#  HallSensor(22)
   try:
     # Loop until users quits with CTRL-C
     thread = ChemSensors(ReadSensors)
@@ -28,6 +28,11 @@ def main():
 	if thread.is_alive() is False:
 		thread = ChemSensors(ReadSensors)
 		thread.start()
+	try:    
+                GPIO.add_event_detect(22, GPIO.BOTH, callback=HallSensor, bouncetime=100)
+        except:
+                pass
+#	os.system('clear')
 	Light()
 	Flood()
 	time.sleep(0.1)
@@ -39,69 +44,62 @@ def main():
 ################################################################
 
 def HallSensor(channel):
-    # Called if sensor output changes
-    timestamp = time.time()
-    stamp = datetime.datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
-    if GPIO.input(channel):
-    	GPIO.output(21, GPIO.LOW)
-    else:
-    	GPIO.output(21, GPIO.LOW)
-    time.sleep(20)
-    now = datetime.datetime.now()
-    #Shed=dbShedRead()
-    Shed=dbRead('Shed')
-    mode =  Shed[1]
-    period = Shed[2]
-    LastFlood = Shed[3]
-    #H2O=dbH2ORead()
-    H2O=dbRead('H2O')
-    Temp = H2O[1]
-    pH = H2O[2]
-    EC = H2O[3]
-    TDS = H2O[4]
-    S = H2O[5]
-    SG = H2O[6]
-    Floodvol = H2O[7]
-    Farm = mysql.connector.connect(
-	                host="localhost",
-	                user="pi",
-	                passwd="a-51d41e",
-	                database="Farm"
-    )
-    H2O = Farm.cursor()
-    sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-    val = (now,Temp,pH,EC,TDS,S,SG,Floodvol)
-    H2O.execute(sql, val)
-    H2O.close 
-    Farm.commit()
-    Data = Farm.cursor()
-    sql = "UPDATE farmdata SET Hall = '1' WHERE date = (select date from farmdata order by date desc limit 1);"
-    Data.execute(sql)
-    Data.close
-    Farm.commit()
-#    if Floodvol > 50:
-    if Floodvol > 1:
-      Floodvol = Floodvol-1
-    else:
-    	Floodvol = '0'
-    SinceLast = 0
-    NextFlood = now + datetime.timedelta(hours = int(period))
-#   print("LastFlood: " + str(LastFlood) + " " + stamp)
-    GPIO.output(21, GPIO.LOW)
-    SinceLast = now-LastFlood
-    now = now.strftime("%Y-%m-%d %H:%M:%S")
-    SinceLastMin = SinceLast.seconds / 60
-    #print "SinceLastMin: ", SinceLastMin
-    if SinceLastMin > 30:
-    	#print("LastFlood: " + str(LastFlood) + ",  now:" + stamp)
-      	SheD = Farm.cursor()
-      	sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-      	val = (now,mode,period,now,NextFlood)
-      	SheD.execute(sql, val)
-      	SheD.close
-    	Farm.commit()
-    time.sleep(1)
-    	
+	print "Draining1"
+	# Called if sensor output changes
+    	timestamp = time.time()
+    	stamp = datetime.datetime.fromtimestamp(timestamp).strftime('%H:%M:%S')
+    	Farm = mysql.connector.connect(
+		host="localhost",
+		user="pi",
+		passwd="a-51d41e",
+		database="Farm"
+    	)
+    	if GPIO.input(channel) or not GPIO.input(channel):
+		print "Draining2"
+		time.sleep(1)
+    		GPIO.output(21, GPIO.LOW)
+    		Data = Farm.cursor()
+    		sql = "UPDATE farmdata SET Hall = '1' WHERE date = (select date from farmdata order by date desc limit 1);"
+    		Data.execute(sql)
+    		Data.close
+    		Farm.commit()
+        	H2O=dbRead('H2O')
+        	Floodvol = H2O[7]
+    		if Floodvol > 1:
+        		Floodvol = Floodvol-1
+    		else:
+        		Floodvol = '0'
+		Temp = H2O[1]
+    		pH = H2O[2]
+		EC = H2O[3]
+    		TDS = H2O[4]
+    		S = H2O[5]
+    		SG = H2O[6]
+    		Floodvol = H2O[7]
+		now = datetime.datetime.now()
+    		H2O = Farm.cursor()
+    		sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+    		val = (now,Temp,pH,EC,TDS,S,SG,Floodvol)
+    		H2O.execute(sql, val)
+    		H2O.close 
+    		Farm.commit()
+		now = datetime.datetime.now()
+    		Shed=dbRead('Shed')
+    		mode =  Shed[1]
+    		period = Shed[2]
+    		LastFlood = Shed[3]
+    		SinceLast = 0
+    		NextFlood = now + datetime.timedelta(hours = int(period))
+    		SinceLast = now-LastFlood
+    		now = now.strftime("%Y-%m-%d %H:%M:%S")
+    		SinceLastMin = SinceLast.seconds / 60
+    		if SinceLastMin > 30:
+        		SheD = Farm.cursor()
+        		sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+        		val = (now,mode,period,now,NextFlood)
+        		SheD.execute(sql, val)
+        		SheD.close
+        		Farm.commit()
  
 #########################################################################
 
@@ -184,6 +182,7 @@ class ChemSensors(threading.Thread):
 #########################################################################
 
 def ReadSensors():
+	GPIO.setmode(GPIO.BCM)
 	while True:
 		now = datetime.datetime.now()
 		now = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -209,9 +208,12 @@ def ReadSensors():
 					f = open(path, "r")
 					for last_line in f:
 						pass
-			temp = last_line.split()
-			temp = str(temp[-1])
-			temp = (float(temp.strip("t=")) /1000 )
+			try:
+				temp = last_line.split()
+				temp = str(temp[-1])
+				temp = (float(temp.strip("t=")) /1000 )
+			except:
+				pass
 		if temp > 45:
 			temp = '28'
 		if temp > 30 and temp < 45:
@@ -222,7 +224,7 @@ def ReadSensors():
 		BedVol = Shed[7]
 		if GPIO.input(21) and not GPIO.input(6):
 			try:
-				BedVol = BedVol + 1
+				BedVol = BedVol + 7.36
 			except ValueError:
 				BedVol = 0
 		Farm = mysql.connector.connect(
@@ -237,7 +239,7 @@ def ReadSensors():
 		H2O.execute(sql, val)
 		H2O.close
 		Farm.commit()
-		time.sleep(30)
+		time.sleep(10)
 ###########################################################################################################
 
 def Light():
@@ -277,7 +279,6 @@ def Flood():
 			Valve("f")
 	        GPIO.output(26, GPIO.HIGH)
                	GPIO.output(21, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
-               	#GPIO.add_event_detect(22, GPIO.BOTH, callback=HallSensor, bouncetime=500)
 		DataWrite()
 	Farm = mysql.connector.connect(
                 host="localhost",
@@ -290,13 +291,14 @@ def Flood():
         myresult = h2ocursor.fetchall()
 	for x in myresult:
   		#os.system('clear')
-  		#print(x)	
-		if myresult[0] == myresult[1] ==  myresult[2] == myresult[3] == myresult[4]:
-		    Data = Farm.cursor()
-		    sql = "UPDATE H2O SET FloodVol = '0' WHERE date = (select date from H2O order by date desc limit 1);"
-		    Data.execute(sql)
-		    h2ocursor.close
-		    Farm.commit()
+  		#print(x)
+  		if myresult[0] != '0':
+			if myresult[0] == myresult[1] ==  myresult[2] == myresult[3] == myresult[4]:
+			    Data = Farm.cursor()
+			    sql = "UPDATE H2O SET FloodVol = '0' WHERE date = (select date from H2O order by date desc limit 1);"
+			    Data.execute(sql)
+			    h2ocursor.close
+			    Farm.commit()
 	time.sleep(2)
 	
 
@@ -399,7 +401,7 @@ def DataWrite():
         Date = Date.strftime("%Y-%m-%d %H:%M:%S")
         now = datetime.datetime.now()
         now = now.strftime("%H:%M:%S")
-
+	
         main = GPIO.input(26)
         Lights = GPIO.input(12)
 	APump = GPIO.input(20)
@@ -409,7 +411,19 @@ def DataWrite():
         ValveD = GPIO.input(6)
         #Act=dbDataRead()
         Act=dbRead('Data')
-        Hall = Act[8]
+        LDate = Act[0]
+        Lmain = Act[1]
+        Llight = Act[2]
+        LExFan = Act[3]
+        LAPump = Act[4]
+        LWPump = Act[5]
+        LValveS = Act[6]
+        LValveD = Act[7]
+        Hall = '0'
+#	if Hall != '0':
+#		Hall = '1'
+#	else:
+#		Hall = '0'
 	Farm = mysql.connector.connect(
                 host="localhost",
                 user="pi",
@@ -425,7 +439,7 @@ def DataWrite():
         # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |  On  |
         # +---------------------+------+--------+-------+---------+-----------+------+------+------+
         sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD,Hall) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,'0')
+        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,Hall)
         SheD.execute(sql, val)
         Farm.commit()
 
