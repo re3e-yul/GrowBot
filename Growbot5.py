@@ -211,7 +211,7 @@ def ReadSensors():
     			Data.close
     			Farm.commit()
                         if Floodvol > 1:
-                                Floodvol = Floodvol - 0.7
+                                Floodvol = Floodvol - 2
                         else:
                                 Floodvol = '0'
 			SinceLast = 0
@@ -224,7 +224,14 @@ def ReadSensors():
                         SinceLast = now-LastFlood
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
                         SinceLastMin = SinceLast.seconds / 60
-                        if SinceLastMin > 30:
+                	now = datetime.datetime.now()
+                	H2O = Farm.cursor()
+                	sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        	        val = (now,Temp,pH,EC,TDS,S,SG,Floodvol)
+	                H2O.execute(sql, val)
+        	        H2O.close 
+	                Farm.commit()
+			if SinceLastMin > 30:
                                 SheD = Farm.cursor()
                                 sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
                                 val = (now,mode,period,now,NextFlood)
@@ -237,21 +244,38 @@ def ReadSensors():
                                 Floodvol = Floodvol + 5
                         except ValueError:
                                 Floodvol = 0
+	                now = datetime.datetime.now()
+			Data = Farm.cursor()
+                        sql = "UPDATE farmdata SET Hall = '0' WHERE date = (select date from farmdata order by date desc limit 1);"
+                        Data.execute(sql)
+                        Data.close
+	               	H2O = Farm.cursor()
+        	        sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+	                val = (now,temp,pH,Ec,TDS,S,SG,Floodvol)
+                	H2O.execute(sql, val)
+        	        H2O.close 
+	                Farm.commit()
                         print now, " Filling", Floodvol
-		Temp = H2O[1]
-                pH = H2O[2]
-                EC = H2O[3]
-                TDS = H2O[4]
-                S = H2O[5]
-                SG = H2O[6]
-                now = datetime.datetime.now()
-                H2O = Farm.cursor()
-                sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-                val = (now,Temp,pH,EC,TDS,S,SG,Floodvol)
-                H2O.execute(sql, val)
-                H2O.close 
-                Farm.commit()
-
+		else:
+			print now, " Nothin", Floodvol
+        		H2O = Farm.cursor()
+                        sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG,FloodVol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+                        val = (now,temp,pH,Ec,TDS,S,SG,Floodvol)
+                        H2O.execute(sql, val)
+                        H2O.close
+			Farm.commit()
+			h2ocursor = Farm.cursor()
+			h2ocursor.execute("select FloodVol from Farm.H2O ORDER BY date DESC LIMIT 5")
+        		myresult = h2ocursor.fetchall()
+			for x in myresult:
+				x = int(''.join(map(str, x)))
+				print x	
+			if myresult[0] == myresult[1] ==  myresult[2] == myresult[3] == myresult[4]:
+					Data = Farm.cursor()
+			    		sql = "UPDATE H2O SET FloodVol = '0' WHERE date = (select date from H2O order by date desc limit 1);"
+			    		Data.execute(sql)
+			    		h2ocursor.close
+			    		Farm.commit()
 ###########################################################################################################
 
 def Light():
@@ -437,8 +461,8 @@ def DataWrite():
         # +---------------------+------+--------+-------+---------+-----------+------+------+------+
         # | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |  On  |
         # +---------------------+------+--------+-------+---------+-----------+------+------+------+
-        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD,Hall) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD,Hall)
+        sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD)
         SheD.execute(sql, val)
         Farm.commit()
 
