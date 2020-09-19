@@ -202,36 +202,42 @@ def ReadSensors():
 				Sum = x
 		H2O=dbRead('H2O')
                 Floodvol = H2O[7]
-                if GPIO.input(21) and not GPIO.input(6):
-                        try:
-                        	Floodvol = Floodvol + 7.36
-                        except ValueError:
-                                Floodvol = 0
-			print now, " Filling", Floodvol
-		if Sum > 12:
+		print Sum
+		if Sum > 9:
                         GPIO.output(21, GPIO.LOW)
+			Data = Farm.cursor()
+    			sql = "UPDATE farmdata SET Hall = '1' WHERE date = (select date from farmdata order by date desc limit 1);"
+    			Data.execute(sql)
+    			Data.close
+    			Farm.commit()
                         if Floodvol > 1:
                                 Floodvol = Floodvol - 0.7
                         else:
                                 Floodvol = '0'
 			SinceLast = 0
-                	Shed=dbRead('Shed')
-                	mode =  Shed[1]
-                	period = Shed[2]
-                	LastFlood = Shed[3]
-                	now = datetime.datetime.now()
-                	NextFlood = now + datetime.timedelta(hours = int(period))
-                	SinceLast = now-LastFlood
-                	now = now.strftime("%Y-%m-%d %H:%M:%S")
-                	SinceLastMin = SinceLast.seconds / 60
-                	if SinceLastMin > 30:
-                        	SheD = Farm.cursor()
-                        	sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-                        	val = (now,mode,period,now,NextFlood)
-                        	SheD.execute(sql, val)
-                        	SheD.close
-                        	Farm.commit()
-			print now, "Draining", Floodvol
+                        Shed=dbRead('Shed')
+                        mode =  Shed[1]
+                        period = Shed[2]
+                        LastFlood = Shed[3]
+                        now = datetime.datetime.now()
+                        NextFlood = now + datetime.timedelta(hours = int(period))
+                        SinceLast = now-LastFlood
+                        now = now.strftime("%Y-%m-%d %H:%M:%S")
+                        SinceLastMin = SinceLast.seconds / 60
+                        if SinceLastMin > 30:
+                                SheD = Farm.cursor()
+                                sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+                                val = (now,mode,period,now,NextFlood)
+                                SheD.execute(sql, val)
+                                SheD.close
+                                Farm.commit()
+                        print now, "Draining", Floodvol
+		elif GPIO.input(21) and not GPIO.input(6):
+                        try:
+                                Floodvol = Floodvol + 5
+                        except ValueError:
+                                Floodvol = 0
+                        print now, " Filling", Floodvol
 		Temp = H2O[1]
                 pH = H2O[2]
                 EC = H2O[3]
