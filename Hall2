@@ -1,0 +1,18 @@
+#! /bin/sh
+while true
+do
+	hall=$(./hall)
+	while [ $hall -eq 0 ]
+	do
+		echo "nothing"
+		sleep 1
+		hall=$(./hall)
+	done
+	hall=$(./hall)
+	while [ $hall -eq 1 ]
+	do
+		echo "Draining"
+		sleep 1
+		hall=$(./hall)
+	done
+done
