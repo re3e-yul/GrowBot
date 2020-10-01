@@ -2,6 +2,7 @@
 # Import required libraries
 import time
 import datetime
+import sys
 import RPi.GPIO as GPIO
 
 def sensorCallback(channel):
@@ -31,26 +32,30 @@ def sensorCallback(channel):
 
 	
 def main():
-  
-  GPIO.setmode(GPIO.BCM)
-  GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)
-  GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=900)
-
-  # catch the user pressing CTRL-C
-  try:
-    # Loop until users quits with CTRL-C
-    #while True :
-    t_end = time.time() + 1
-    while time.time() < t_end:
-      time.sleep(0.1)
-
-  except KeyboardInterrupt:
-    # Reset GPIO settings
-    GPIO.cleanup()
-  try:
-    print stat
-  except:
-    print 0
+	while True:
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setup(22 , GPIO.IN, pull_up_down=GPIO.PUD_UP)
+		GPIO.setup(23 , GPIO.IN, pull_up_down=GPIO.PUD_UP)  
+		try:
+			GPIO.add_event_detect(22, GPIO.BOTH, callback=sensorCallback, bouncetime=200)
+		except:
+			pass
+		try:
+			GPIO.add_event_detect(23, GPIO.BOTH, callback=sensorCallback, bouncetime=200)
+		except:
+			pass
+		try:
+			t_end = time.time() + 1
+			while time.time() < t_end:
+				time.sleep(0.1)
+		except KeyboardInterrupt:
+    			# Reset GPIO settings
+    			GPIO.cleanup()
+			sys.exit(0)
+		try:
+			print channel, stat
+		except:
+			print "Nothin"
 # Tell GPIO library to use GPIO references
 
 if __name__=="__main__":

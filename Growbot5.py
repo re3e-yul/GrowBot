@@ -250,7 +250,7 @@ def ReadSensors():
                         print now, "Draining", Floodvol
 		elif GPIO.input(21) and not GPIO.input(6):
                         try:
-                                Floodvol = Floodvol + 2.5
+                                Floodvol = Floodvol + 1.5
                         except ValueError:
                                 Floodvol = 0
 	                now = datetime.datetime.now()
