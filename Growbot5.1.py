@@ -60,7 +60,7 @@ def HallSensor(channel):
         global count
         count = count+1
         flow = count / (60 * -7.5)
-        print T, ", Channel: ", channel, "Count: ", count, "Bed1Volume: ", Bed1vol , "Bed2Volume: ", Bed2vol
+#        print T, ", Channel: ", channel, "Count: ", count, "Bed1Volume: ", Bed1vol , "Bed2Volume: ", Bed2vol
     	Farm = mysql.connector.connect(
 		host="localhost",
 		user="pi",
@@ -212,6 +212,7 @@ def ReadSensors():
                 except:
                         pass
 
+
                 pHECT()
                 DrainPump()
 
@@ -353,9 +354,10 @@ def DrainPump():
                                 database="Farm"
                                 )
                         DV = Farm.cursor()
-                        sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                        val = (now,Hall1,"0",Hall3,Hall4,"0",Bed2vol)
-                        DV.execute(sql, val)
+			sql = "update VolDrain set Hall2 = 0 order by date desc limit 3;"
+#                        sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+#                        val = (now,Hall1,"0",Hall3,Hall4,"0",Bed2vol)
+                        DV.execute(sql) #, val)
                         DV.close
                         Farm.commit()
 
@@ -400,8 +402,11 @@ def DrainPump():
                 Hall2 = DVcursor.fetchone()
 		Hall1 = int(''.join(map(str, Hall1)))
                 Hall2 = int(''.join(map(str, Hall2)))
-		if Hall1 == 10: # or Hall2 == 10:
-                        GPIO.output(21, GPIO.LOW)
+		if Hall1 == 10:
+                        #GPIO.output(21, GPIO.LOW)
+			if not GPIO.input(6):
+				print "swing valve"
+                        	Valve("1")
 			SinceLast = 0
                         Shed=dbRead('Shed')
                         mode =  Shed[1]
@@ -420,6 +425,9 @@ def DrainPump():
                         SheD.close
                         Farm.commit()
                 if Hall2 == 10:
+			if GPIO.input(6):
+                                print "swing valve"
+                                Valve("0")
                         GPIO.output(21, GPIO.LOW)
                         SinceLast = 0
                         Shed=dbRead('Shed')
@@ -512,23 +520,26 @@ def Valve(dir):
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	OnOff = GPIO.input(5)
 	ValveD = GPIO.input(6)
+	print "go Dir: ", dir, "valv dir: ", ValveD
 	if dir != ValveD:
-		if OnOff:
-			if ValveD:
-				GPIO.output(5, GPIO.LOW)
-				GPIO.output(6, GPIO.HIGH)
-				t_end = time.time() + 13
-				while time.time() < t_end:
-					time.sleep(1)
-				GPIO.output(5, GPIO.HIGH)
-	        else:
-        	        if not ValveD:
-                	        GPIO.output(5, GPIO.LOW)
-                        	GPIO.output(6, GPIO.LOW)
-                        	t_end = time.time() + 13
-                        	while time.time() < t_end:
-	                               	time.sleep(1)
-                        	GPIO.output(5, GPIO.HIGH)
+		print "move"
+		if ValveD:
+			print "valv=1"
+			GPIO.output(5, GPIO.LOW)
+			GPIO.output(6, GPIO.LOW)
+			t_end = time.time() + 13
+			while time.time() < t_end:
+				time.sleep(1)
+			GPIO.output(5, GPIO.HIGH)
+	#else:
+       	        if not ValveD:
+			print "valv=0"
+               	        GPIO.output(5, GPIO.LOW)
+                       	GPIO.output(6, GPIO.HIGH)
+                       	t_end = time.time() + 13
+                       	while time.time() < t_end:
+                               	time.sleep(1)
+                       	GPIO.output(5, GPIO.HIGH)
 
 
 
