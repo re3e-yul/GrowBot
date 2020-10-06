@@ -113,8 +113,6 @@ def truncate(n, decimals=0):
 ################################################################
 
 def HallSensor(channel):
-#       global T
-#       T = 0
         global count1
         global count2
         global count3
