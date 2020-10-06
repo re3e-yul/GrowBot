@@ -9,25 +9,69 @@ import RPi.GPIO as GPIO
 import mysql.connector
 import threading
 GPIO.setmode(GPIO.BCM)
-FLOW_SENSOR1 = 22
-FLOW_SENSOR2 = 23
-FLOW_SENSOR3 = 24
-FLOW_SENSOR4 = 25
+Pump = 21
+Valve = 5
+VDir = 6
+DrainBed1 = 22
+DrainBed2 = 18
+PumpBed1 = 24
+PumpBed2 = 25
 GPIO.setwarnings(False)
 GPIO.setup(5, GPIO.OUT)
 GPIO.setup(6, GPIO.OUT)
 GPIO.setup(12 , GPIO.OUT)
 GPIO.setup(16, GPIO.OUT)
 GPIO.setup(21, GPIO.OUT)
-GPIO.setup(FLOW_SENSOR1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR3, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR4, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+global count1
+global count2
+global count3
+global count4
+global flow1
+global flow2
+global flow3
+global flow4
+global Sensor
+global HD1
+global Hall1
+global HD2
+global Hall2
+global HD3
+global Hall3
+global HD4
+global Hall4
+global VolBed1
+global VolBed2
+count1 = 0
+count2 = 0
+count3 = 0
+count4 = 0
+flow1 = 0
+flow2 = 0
+flow3 = 0
+flow4 = 0
+HD1 = 0
+HD2 = 0
+VolBed1 = 0
+VolBed2 = 0
+HD3 = 0
+HD4 = 0
+Hall1 = 0
+Hall2 = 0
+Hall3 = 0
+Hall4 = 0
+
+Drain1 = 22
+Drain2 = 18
+PBed1 = 24
+PBed2 = 25
+GPIO.setup(Drain1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(Drain2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(PBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(PBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(20, GPIO.OUT)
 GPIO.setup(21, GPIO.OUT)
 GPIO.setup(26, GPIO.OUT)
-global count
-count = 0
+
 
 ############################################################################
 def main():
@@ -39,19 +83,19 @@ def main():
 		thread = ChemSensors(ReadSensors)
 		thread.start()
 	try:
-		GPIO.add_event_detect(FLOW_SENSOR1, GPIO.FALLING, callback=HallSensor)
+		GPIO.add_event_detect(22, GPIO.FALLING, callback=HallSensor)
         except:
                 pass
         try:
-		GPIO.add_event_detect(FLOW_SENSOR2, GPIO.FALLING, callback=HallSensor)
+		GPIO.add_event_detect(18, GPIO.FALLING, callback=HallSensor)
         except:
                 pass
         try:
-		GPIO.add_event_detect(FLOW_SENSOR3, GPIO.FALLING, callback=HallSensor)
+		GPIO.add_event_detect(24, GPIO.FALLING, callback=HallSensor)
         except:
                 pass
         try:
-		GPIO.add_event_detect(FLOW_SENSOR4, GPIO.FALLING, callback=HallSensor)
+		GPIO.add_event_detect(25, GPIO.FALLING, callback=HallSensor)
         except:
                 pass
 	Light()
@@ -61,77 +105,94 @@ def main():
   except KeyboardInterrupt:
     # Reset GPIO settings
     GPIO.cleanup()
+    sys.exit(0)
 ###############################
 def truncate(n, decimals=0):
     multiplier = 1 ** decimals
     return int(n * multiplier) / multiplier
 ################################################################
+
 def HallSensor(channel):
-	global count1
-	global count2
-	global count3
-	global count4
-	global Sensor
-	Farm = mysql.connector.connect(
-		host="localhost",
-		user="pi",
-		passwd="a-51d41e",
-		database="Farm"
-	)
-	now = datetime.now()
-	VD = dbRead('VolDrain')
-	Hall1 = VD[1]
-	Hall2 = VD[2]
-	Hall3 = VD[3]
-	Hall4 = VD[4]
-	Bed1vol = VD[5]
-	Bed2vol = VD[6]
-
-
-	if channel == 24:
-		Sensor = "Pump 1"
-		count1 = count1 + 1
-		Bed1vol = round(count1 / (60 * 7.5), 3)
-		sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-		val = (now, Hall1, Hall2, "1", Hall4, Bed1vol, Bed2vol)
-	###############
-	#             #
-	#  Bed1 Drain #
-	#             #
-	###############
-	if channel == 22:
-		Sensor = "Drain 1"
-		count1 = count1 - 1
-		Bed1vol = round(count1 / (60 * 7.5), 3)
-		sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-		val = (now, "1", Hall2, Hall3, Hall4, Bed1vol, Bed2vol)
-
-	###############
-	#             #
-	#  Bed2 Fill  #
-	#             #
-	###############
-	if channel == 25:
-		Sensor = "Pump 2"
-		count2 = count2 + 1
-		Bed2vol = round((count2 / (60 * 7.5)), 3)
-		sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-		val = (now, Hall1, Hall2, Hall3, "1", Bed1vol, Bed2vol)
-
-	###############
-	#             #
-	#  Bed2 Drain #
-	#             #
-	###############
-	if channel == 23:
-		Sensor = "Drain 2"
-		count2 = count2 - 1
-		Bed2vol = round(count2 / (60 * 7.5), 3)
-		sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-		val = (now, Hall1, "1", Hall3, Hall4, Bed1vol, Bed2vol)
-	DV.execute(sql, val)
-	DV.close
-	Farm.commit()
+#       global T
+#       T = 0
+        global count1
+        global count2
+        global count3
+        global count4
+        global flow1
+        global flow2
+        global flow3
+        global flow4
+        global Sensor
+	global HD1
+	global Hall1
+	global HD2
+	global Hall2
+	global HD3
+	global Hall3
+	global HD4
+	global Hall4
+	global VolBed1
+	global VolBed2
+	VD=dbRead('VolDrain')
+        date = VD[0]
+        HD1 = VD[1]
+        Hall1 = VD[2]
+        HD2 = VD[3]
+        Hall2 = VD[4]
+        HD3 = VD[5]
+        Hall3 = VD[6]
+        HD4 = VD[7]
+        Hall4 = VD[8]
+        VolBed1 = VD[9]
+        VolBed2 = VD[10]
+#       now = datetime.now()
+#       T = now.strftime("%H:%M:%S")
+        Farm = mysql.connector.connect(
+                host="localhost",
+                user="pi",
+                passwd="a-51d41e",
+                database="Farm"
+        )
+        now = datetime.datetime.now()
+	now = now.strftime("%Y-%m-%d %H:%M:%S")
+	DV = Farm.cursor()
+	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
+        if (channel == 22):
+                        Sensor = "Drain1"
+                        count1 = count1 + 1
+			if VolBed1 > 1:
+	                        count3 = count3 - 1
+			else:
+				VolBed1 = 0
+        		VolBed1 = round(count3 * 9 / 60,5)
+	                val = (now, now, "1", HD2, Hall2, HD3, Hall3, HD4, Hall4, VolBed1, VolBed2)
+			print now, Sensor, count1, VolBed1
+        if (channel == 18):
+                        Sensor = "Drain2"
+                        count2 = count2 + 1
+			if VolBed2 > 0:
+	                        count4 = count4 - 1
+			else:
+				VolBed2 = 0
+                        VolBed2 = round(count4 * 9 / 60,5)
+	                val = (now, HD1, Hall1, now, "1", HD3, Hall3, HD4, Hall4, VolBed1, VolBed2)
+			print now, Sensor, count2, VolBed2
+        if (channel == 24):
+                        Sensor = "Pump1"
+                        count3 = count3 + 1
+                        VolBed1 = round(count3 * 9 / 60,5)
+	                val = (now, HD1, Hall1, HD2, Hall2, now, "1", now, "0", VolBed1, VolBed2)
+			print now, Sensor, count3, VolBed1
+        if (channel == 25):
+                        Sensor = "Pump2"
+                        count4 = count4 + 1
+                        VolBed2 = round(count4 * 9 / 60,5)
+			val = (now, HD1, Hall1, HD2, Hall2, now , "0", now, "1", VolBed1, VolBed2)
+			print now, Sensor, count4, VolBed1
+        DV.execute(sql, val)
+        DV.close
+        Farm.commit()
 #########################################################################
 class atlas_i2c:
     	long_timeout = 1.5 # the timeout needed to query readings and calibrations
@@ -205,24 +266,15 @@ class ChemSensors(threading.Thread):
         self.runnable()
 #########################################################################
 def ReadSensors():
-        GPIO.setmode(GPIO.BCM)
-        while True:
-
-                ######################
-                # Keepalive on halls #
-                ######################
-#                try:    
-#                        GPIO.add_event_detect(22, GPIO.BOTH, callback=HallSensor, bouncetime=100)
-#                except:
-#                        pass
-#                try:    
-#                        GPIO.add_event_detect(23, GPIO.BOTH, callback=HallSensor, bouncetime=100)
-#                except:
-#                        pass
-
-
-                pHECT()
-                DrainPump()
+	GPIO.setmode(GPIO.BCM)
+	try:	
+	        while True:
+	                pHECT()
+        	        DrainPump()
+	except KeyboardInterrupt:
+		# Reset GPIO settings
+    		GPIO.cleanup()
+    		sys.exit(0)
 ############################################################################
 def pHECT():
 		GPIO.setmode(GPIO.BCM)
@@ -290,25 +342,21 @@ def DrainPump():
                         database="Farm"
                 )
 		DVcursor = Farm.cursor()
-		DVcursor.execute("select date from VolDrain where Hall1 = '1' ORDER BY date desc limit 1;")
+		DVcursor.execute("select DH1 from VolDrain where Hall1 = '1' order by date desc limit 1;")
 		H1Date = DVcursor.fetchone()
+
 		DVcursor = Farm.cursor()
-		DVcursor.execute("select date from VolDrain where  Hall2 = '1' ORDER BY date desc limit 1;")
+		DVcursor.execute("select DH2 from VolDrain where Hall2 = '1' order by date desc limit 1;")
 		H2Date = DVcursor.fetchone()
+
 		DVcursor = Farm.cursor()
-		DVcursor.execute("select date from VolDrain where Hall3 = '1'  ORDER BY date desc limit 1;")
+		DVcursor.execute("select DH3 from VolDrain where Hall3 = '1' order by date desc limit 1;")
 		P1Date = DVcursor.fetchone()
+
 		DVcursor = Farm.cursor()
-		DVcursor.execute("select date from VolDrain where Hall4 = '1' ORDER BY date desc limit 1;")
+		DVcursor.execute("select DH4 from VolDrain where Hall4 = '1' order by date desc limit 1;")
 		P2Date = DVcursor.fetchone()
 		DVcursor.close
-		VD=dbRead('VolDrain')
-		Hall1 = VD[1]
-		Hall2 = VD[2]
-		Hall3 = VD[3]
-		Hall4 = VD[4]
-		Bed1vol = VD[5]
-		Bed2vol = VD[6]
 		H1Date = str(''.join(map(str, H1Date)))
 		H2Date = str(''.join(map(str, H2Date)))
 		P1Date = str(''.join(map(str, P1Date)))
@@ -319,122 +367,100 @@ def DrainPump():
 		P2Date = datetime.datetime.strptime(P2Date,"%Y-%m-%d %H:%M:%S")
 		SinceLast1 = now-H1Date
 		SinceLast2 = now-H2Date
-		SinceLast1 = SinceLast1.seconds
-	        SinceLast2 = SinceLast2.seconds
-        	PSinceLast1 = now-P1Date
-        	PSinceLast1 = PSinceLast1.seconds
+         	PSinceLast1 = now-P1Date
         	PSinceLast2 = now-P2Date
+		SinceLast1 = SinceLast1.seconds
+                SinceLast2 = SinceLast2.seconds
+		PSinceLast1 = PSinceLast1.seconds
 		PSinceLast2 = PSinceLast2.seconds
-		print "Drain1:", SinceLast1, " Drain2: ",SinceLast2, " Pump1: ",PSinceLast1, " Pump1: ",PSinceLast2
-		if SinceLast1 > 5:
-			now = datetime.datetime.now()
-			now = now.strftime("%Y-%m-%d %H:%M:%S")
-            		DV = Farm.cursor()
-			sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-			val = (now,"0",Hall2,Hall3,Hall4,"0",Bed2vol)
-       			DV.execute(sql, val)
-      			DV.close
-
-      		if SinceLast2 > 5:
-			now = datetime.datetime.now()
-			now = now.strftime("%Y-%m-%d %H:%M:%S")
-            		DV = Farm.cursor()
-			sql = "update VolDrain set Hall2 = 0 order by date desc limit 3;"
-			DV.execute(sql) #, val)
+		value = ""
+		now = datetime.datetime.now()
+	        T = now.strftime("%H:%M:%S")
+	        now = now.strftime("%Y-%m-%d %H:%M:%S")
+		Sensor = ""
+     		if SinceLast1 > 2:
+		        DV = Farm.cursor(prepared=True)
+			sql = """UPDATE VolDrain SET DH1 = %s, Hall1 = %s, VolBed1 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+			data =  (now, "0", "0")
+			DV.execute(sql,data)
 			DV.close
 
-		if PSinceLast1 > 2:
-			#print "reset pump"
-			now = datetime.datetime.now()
-			now = now.strftime("%Y-%m-%d %H:%M:%S")
-			DV = Farm.cursor()
-			sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-			val = (now,Hall1,Hall2,"0",Hall4,Bed1vol,Bed2vol)
-			DV.execute(sql, val)
+     		if SinceLast2 > 2:
+			DV = Farm.cursor(prepared=True)
+			sql = """UPDATE VolDrain SET DH2 = %s, Hall2 = %s, VolBed2 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+			data = (now, "0", "0")
+			DV.execute(sql,data)
 			DV.close
 
-		if PSinceLast2 > 2:
-			now = datetime.datetime.now()
-			now = now.strftime("%Y-%m-%d %H:%M:%S")
-			DV = Farm.cursor()
-			sql = "INSERT INTO Farm.VolDrain (date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-			val = (now,Hall1,Hall2,Hall3,"0",Bed1vol,Bed2vol)
-			DV.execute(sql, val)
-			DV.close
+                if PSinceLast1 > 2:
+                        DV = Farm.cursor(prepared=True)
+			sql = """UPDATE VolDrain SET DH3 = %s, Hall3 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+                        data = (now, "0")
+			DV.execute(sql,data)
+                        DV.close
+
+                if PSinceLast2 > 2:
+                        DV = Farm.cursor(prepared=True)
+			sql = """UPDATE VolDrain SET DH4 = %s, Hall4 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+                        data = (now, "0")
+			DV.execute(sql,data)
+                        DV.close
 		Farm.commit()
-
+#		print "P1:", PSinceLast1, "P2:", PSinceLast2
+#		print "D1:", SinceLast1, "D2:", SinceLast2
 		DVcursor = Farm.cursor()
 		DVcursor.execute("select sum(Hall1) FROM (select date, Hall1 from VolDrain ORDER BY date desc limit 10) t;")
 		Hall1 = DVcursor.fetchone()
 		DVcursor.execute("select sum(Hall2) FROM (select date, Hall2 from VolDrain ORDER BY date desc limit 10) t;")
 		Hall2 = DVcursor.fetchone()
+                DVcursor.execute("select sum(Hall3) FROM (select date, Hall3 from VolDrain ORDER BY date desc limit 10) t;")
+                Hall3 = DVcursor.fetchone()
+                DVcursor.execute("select sum(Hall4) FROM (select date, Hall4 from VolDrain ORDER BY date desc limit 10) t;")
+                Hall4 = DVcursor.fetchone()
 		Hall1 = int(''.join(map(str, Hall1)))
 		Hall2 = int(''.join(map(str, Hall2)))
-		if Hall1 == 10 and not GPIO.input(6):
+		Hall3 = int(''.join(map(str, Hall3)))
+                Hall4 = int(''.join(map(str, Hall4)))
+		PStatus = GPIO.input(21)
+		SinceLast = 0
+                Shed=dbRead('Shed')
+                mode =  Shed[1]
+                period = Shed[2]
+                LastFlood = Shed[3]
+                now = datetime.datetime.now()
+                NextFlood = now + datetime.timedelta(hours = int(period))
+                SinceLast = now-LastFlood
+                now = now.strftime("%Y-%m-%d %H:%M:%S")
+                SinceLastMin = SinceLast.seconds / 60
+                now = datetime.datetime.now()
+		if Hall1 == 10 and Hall2 < 10 and Hall3 == 10 :
 			Valve("1")
-#			SinceLast = 0
-#			Shed=dbRead('Shed')
-#			mode =  Shed[1]
-#			period = Shed[2]
-#			LastFlood = Shed[3]
-#			now = datetime.datetime.now()
-#			NextFlood = now + datetime.timedelta(hours = int(period))
-#			SinceLast = now-LastFlood
-#			now = now.strftime("%Y-%m-%d %H:%M:%S")
-#			SinceLastMin = SinceLast.seconds / 60
-#			now = datetime.datetime.now()
-#			SheD = Farm.cursor()
-#			sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-#			val = (now,mode,period,now,NextFlood)
-#			SheD.execute(sql, val)
-#			SheD.close
-#			Farm.commit()
-		if Hall2 == 10:
-			if GPIO.input(6):
-				Valve("0")
-				GPIO.output(21, GPIO.LOW)
-				SinceLast = 0
-				Shed=dbRead('Shed')
-				mode =  Shed[1]
-				period = Shed[2]
-				LastFlood = Shed[3]
-				now = datetime.datetime.now()
-				NextFlood = now + datetime.timedelta(hours = int(period))
-				SinceLast = now-LastFlood
-				now = now.strftime("%Y-%m-%d %H:%M:%S")
-				SinceLastMin = SinceLast.seconds / 60
-				now = datetime.datetime.now()
-				SheD = Farm.cursor()
-				sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-				val = (now,mode,period,now,NextFlood)
-				SheD.execute(sql, val)
-  				SheD.close
-				Farm.commit()
-		#################
-		# Pump & Valves #
-		#################
-		if GPIO.input(21):
-			now = datetime.datetime.now()
-			Shed=dbRead('Shed')
-			mode = Shed[1]
-			period = Shed[2]
-			LastFlood = Shed[3]
-			NextFlood = now + datetime.timedelta(hours = int(period))
-			SinceLast = now-LastFlood
-			SinceLastMin = SinceLast.seconds / 60
-			VD=dbRead('VolDrain')
-			Hall1 = VD[1]
-			Hall2 = VD[2]
-			Bed1vol = VD[3]
-			Bed2vol = VD[4]
-			DV = Farm.cursor()
 			if SinceLastMin > 30:
-				SheD = Farm.cursor()
-				sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
-				val = (now,mode,period,now,NextFlood)
-				SheD.execute(sql, val)
- 				SheD.close
-				Farm.commit()
+                                SheD = Farm.cursor()
+                                sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+                                val = (now,mode,period,now,NextFlood)
+                                SheD.execute(sql, val)
+                                SheD.close
+				 DV = Farm.cursor(prepared=True)
+                        	sql = """UPDATE VolDrain SET DH3 = %s, Hall3 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+                        	data = (now, "0")
+                        	DV.execute(sql,data)
+                                Farm.commit()
+		elif Hall2 == 10 and Hall4 == 10:
+			GPIO.output(21, GPIO.LOW)
+			if SinceLastMin > 30:
+            			GPIO.output(21, GPIO.LOW)
+		                SheD = Farm.cursor()
+                                sql = "INSERT INTO Farm.Shed (date,mode,period,LastFlood,NextFlood) VALUES (%s, %s, %s, %s, %s)"
+                                val = (now,mode,period,now,NextFlood)
+                                SheD.execute(sql, val)
+                                SheD.close
+				DV = Farm.cursor(prepared=True)
+                        	sql = """UPDATE VolDrain SET DH4 = %s, Hall4 = %s where date = (select date from VolDrain order by date desc limit 1)"""
+                        	data = (now, "0")
+                        	DV.execute(sql,data)
+                        	DV.close
+                                Farm.commit()
 ###########################################################################################################
 def Light():
 	Shed=dbRead('Shed')
@@ -465,37 +491,35 @@ def Flood():
        	NextFlood = Shed[4]
 	PStatus = GPIO.input(21)
 	Date = datetime.datetime.strptime(Date, '%Y-%m-%d  %H:%M:%S')
-	if Date > NextFlood and not PStatus: 
+	if Date > NextFlood and not PStatus:
+		print "in pump loop" 
 		ValveD = GPIO.input(6)
-		if ValveD:
+		if ValveD and not PStatus:
 			Valve("0")
-	        GPIO.output(26, GPIO.HIGH)
-               	GPIO.output(21, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
-#		DataWrite()
+		GPIO.output(26, GPIO.HIGH)
+		GPIO.output(21, GPIO.HIGH)   # <---------------- change to HIGH when theres water or a way too check
+		DataWrite()
 #############################################################
 def Valve(dir):
 	now = datetime.datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	OnOff = GPIO.input(5)
 	ValveD = GPIO.input(6)
-	print "go Dir: ", dir, "valv dir: ", ValveD
 	if dir != ValveD:
 		if ValveD:
-			print "valv=1"
 			GPIO.output(5, GPIO.LOW)
 			GPIO.output(6, GPIO.LOW)
 			t_end = time.time() + 13
 			while time.time() < t_end:
 				time.sleep(1)
 			GPIO.output(5, GPIO.HIGH)
-       	        if not ValveD:
-			print "valv=0"
-               	        GPIO.output(5, GPIO.LOW)
-                       	GPIO.output(6, GPIO.HIGH)
-                       	t_end = time.time() + 13
-                       	while time.time() < t_end:
-                               	time.sleep(1)
-                       	GPIO.output(5, GPIO.HIGH)
+      	        if not ValveD:
+              	        GPIO.output(5, GPIO.LOW)
+                      	GPIO.output(6, GPIO.HIGH)
+                      	t_end = time.time() + 13
+                      	while time.time() < t_end:
+                             	time.sleep(1)
+                      	GPIO.output(5, GPIO.HIGH)
 #################################################################################################
 def dbRead(table):
         Farm = mysql.connector.connect(
@@ -558,13 +582,17 @@ def dbRead(table):
                 cursor.close
                 try:
 			date = myresult[0]
-			Hall1 = myresult[1]
-			Hall2 = myresult[2]
-                        Hall3 = myresult[3]
-                        Hall4 = myresult[4]
-			VolBed1 = myresult[5]
-			VolBed2 = myresult[6]
-			return date,Hall1,Hall2,Hall3,Hall4,VolBed1,VolBed2
+			HD1 = myresult[1]
+			Hall1 = myresult[2]
+			HD2 = myresult[3]
+			Hall2 = myresult[4]
+			HD3 = myresult[5]
+                        Hall3 = myresult[6]
+			HD4 = myresult[7]
+                        Hall4 = myresult[8]
+			VolBed1 = myresult[9]
+			VolBed2 = myresult[10]
+			return date,HD1,Hall1,HD2,Hall2,HD3,Hall3,HD4,Hall4,VolBed1,VolBed2
                 except TypeError:
                         pass
 ###################################################################################################
@@ -611,5 +639,8 @@ def DataWrite():
         SheD.execute(sql, val)
         Farm.commit()
 
+
 if __name__=="__main__":
+   
    main()
+

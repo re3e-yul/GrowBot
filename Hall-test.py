@@ -4,16 +4,19 @@ import RPi.GPIO as GPIO
 import time, sys, os
 from datetime import datetime
 import math
-FLOW_SENSOR = 22
-FLOW_SENSOR2 = 23
-FLOW_SENSOR3 = 24
-FLOW_SENSOR4 = 25
+Pump = 21
+Valve = 5
+VDir = 6
+DrainBed1 = 22
+DrainBed2 = 18
+PumpBed1 = 24
+PumpBed2 = 25
 #GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(FLOW_SENSOR, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR3, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-GPIO.setup(FLOW_SENSOR4, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(DrainBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(DrainBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(PumpBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(PumpBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 global option
 global T
 global count1
@@ -53,27 +56,29 @@ def countPulse(channel):
 	global Sensor
 #	now = datetime.now()
 #	T = now.strftime("%H:%M:%S")
-	if channel == 22:
+	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			count1 = count1 + 1
-			flow1 = round((count1 / (60 * 7.5)),3)
-	if channel == 23:
+			count3 = count3 - 1
+			flow1 = round((count1 / (60 * 28.3906)),3)
+	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 1
-			flow2 = round(count2 / (60 * 7.5),3)
-	if channel == 24:
+			count4 = count4 - 1
+			flow2 = round(count2 / (60 * 28.3906),3)
+	if (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        count3 = count3 + 1
-			flow3 = round(count3 / (60 * 7.5),3)
-        if channel == 25:
+			flow3 = round(count3 / (60 * 28.3906),3)
+        if (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
-			flow4 = round(count4 / (60 * 7.5),3)
+			flow4 = round(count4 / (60 * 28.3906),3)
 
-GPIO.add_event_detect(FLOW_SENSOR, GPIO.FALLING, callback=countPulse)
-GPIO.add_event_detect(FLOW_SENSOR2, GPIO.FALLING, callback=countPulse)
-GPIO.add_event_detect(FLOW_SENSOR3, GPIO.FALLING, callback=countPulse)
-GPIO.add_event_detect(FLOW_SENSOR4, GPIO.FALLING, callback=countPulse)
+GPIO.add_event_detect(DrainBed1, GPIO.FALLING, callback=countPulse)
+GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
+GPIO.add_event_detect(PumpBed1, GPIO.FALLING, callback=countPulse)
+GPIO.add_event_detect(PumpBed2, GPIO.FALLING, callback=countPulse)
 try:
 	option = sys.argv[1]
 except:
@@ -81,21 +86,23 @@ except:
 
 while True:
     try:
+	value = ""
 	now = datetime.now()
 	T = now.strftime("%H:%M:%S")
+	Sensor = ""
 	os.system('clear')
 	
 	print T , Sensor
 	print ""
-	print "Pump Bed1 Hits  :", count3, "Volume: ", flow3,"L"
-	print "Drain Bed1 Hits :", count1, "Volume: ", flow1,"L"
+	print "Pump Bed1 Volume: ", flow3,"L"
+	print "Drain Bed1 Volume: ", flow1,"L"
 	print ""
-	print "Pump Bed2 Hits  :", count4, "Volume: ", flow4,"L"
-	print "Drain Bed2 Hits :", count2, "Volume: ", flow2,"L"
-
+	print "Pump Bed2 Volume: ", flow4,"L"
+	print "Drain Bed2 Volume: ", flow2,"L"
 	time.sleep(0.3)
 #	Sensor = ""
     except KeyboardInterrupt:
+	
         print '\ncaught keyboard interrupt!, bye'
         GPIO.cleanup()
         sys.exit()
