@@ -11,12 +11,14 @@ DrainBed1 = 22
 DrainBed2 = 18
 PumpBed1 = 24
 PumpBed2 = 25
+Pump = 21
 #GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(DrainBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(DrainBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+GPIO.setup(Pump, GPIO.IN)
 global option
 global T
 global count1
@@ -91,9 +93,14 @@ while True:
 	T = now.strftime("%H:%M:%S")
 	Sensor = ""
 	os.system('clear')
-	
+	PStatus = GPIO.input(21)	
 	print T , Sensor
 	print ""
+	if PStatus:
+		PStatus == "On"
+	else:
+		PStatus == "Off"
+	print "Pump: ", PStatus
 	print "Pump Bed1 Volume: ", flow3,"L"
 	print "Drain Bed1 Volume: ", flow1,"L"
 	print ""
