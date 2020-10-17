@@ -388,7 +388,6 @@ def AntiHall():
 			H2Date = datetime.datetime.strptime(H2Date,"%Y-%m-%d %H:%M:%S")
 			P1Date = datetime.datetime.strptime(P1Date,"%Y-%m-%d %H:%M:%S")
 			P2Date = datetime.datetime.strptime(P2Date,"%Y-%m-%d %H:%M:%S")
-			SinceLast = now-date
 			SinceLast1 = now-H1Date
 			SinceLast2 = now-H2Date
 			PSinceLast1 = now-P1Date
@@ -408,8 +407,7 @@ def AntiHall():
                                         passwd="a-51d41e",
                                         database="Farm"
                         )
-			print SinceLast
-			if SinceLast > 30:
+			if SinceLast1 > 100 and SinceLast2 > 100 and PSinceLast1 > 100  and PSinceLast2 > 100:
 				DV = Farm.cursor()
 				VD=dbRead('VolDrain')
 			        date = VD[0]

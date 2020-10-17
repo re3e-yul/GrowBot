@@ -26,7 +26,9 @@ global count2
 global count3
 global count4
 global flow1
+global flow1b
 global flow2
+global flow2b
 global flow3
 global flow4
 global Sensor
@@ -37,7 +39,9 @@ count2 = 0
 count3 = 0
 count4 = 0
 flow1 = 0
+flow1b = 0
 flow2 = 0
+flow2b = 0
 flow3 = 0
 flow4 = 0
 def truncate(n, decimals=0):
@@ -52,7 +56,9 @@ def countPulse(channel):
 	global count3
 	global count4
 	global flow1
+	global flow1b
         global flow2
+        global flow2b
         global flow3
         global flow4
 	global Sensor
@@ -63,11 +69,13 @@ def countPulse(channel):
 			count1 = count1 + 1
 			count3 = count3 - 1
 			flow1 = round((count1 / (60 * 28.3906)),3)
+			flow1b = round((count3 / (60 * 28.3906)),3)
 	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 1
 			count4 = count4 - 1
 			flow2 = round(count2 / (60 * 28.3906),3)
+			flow2b = round(count4 / (60 * 28.3906),3)
 	if (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        count3 = count3 + 1
@@ -102,10 +110,10 @@ while True:
 		PStatus == "Off"
 	print "Pump: ", PStatus
 	print "Pump Bed1 Volume: ", flow3,"L"
-	print "Drain Bed1 Volume: ", flow1,"L"
+	print "Drain Bed1 Volume: ", flow1,"L\t", flow1b,"L"
 	print ""
 	print "Pump Bed2 Volume: ", flow4,"L"
-	print "Drain Bed2 Volume: ", flow2,"L"
+	print "Drain Bed2 Volume: ", flow2,"L\t", flow2b,"L"
 	time.sleep(0.3)
 #	Sensor = ""
     except KeyboardInterrupt:
