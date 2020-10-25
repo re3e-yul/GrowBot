@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import RPi.GPIO as GPIO
-import time, sys, os
+import time
+import sys
+import os
 import datetime as DT
 from datetime import datetime
 import math
@@ -103,17 +105,8 @@ def main():
 
 			Light()
 		        Flood()
-#			Display()
-#			os.system('clear')
-			print T
-		        print ""
-#	       		print "Light: ",LStatus, "Pump: ", PStatus 
-        		print "Pump Bed1 Volume: ", flow3,"L"
-        		print "Drain Bed1 Volume: ", flow1,"L\t", flow1b,"L"
-        		print ""
-        		print "Pump Bed2 Volume: ", flow4,"L"
-#        		print "Drain Bed2 Volume: ", flow2,"L\t", flow2b,"L"
-			time.sleep(0.9)
+			Display()
+			DataWrite()
 	except KeyboardInterrupt:
 		print '\ncaught keyboard interrupt!, bye'
                 GPIO.cleanup()
@@ -121,24 +114,14 @@ def main():
 	
 
 def Display():
-#	global flow1
-#	global flow1b
-#	global flow2
-#	global flow2b
-#	global flow3
-#	global flow4
-#	global PStatus
-#	global LStatus
-#        value = ""
         now = datetime.now()
         T = now.strftime("%H:%M:%S")
-        Sensor = ""
-        os.system('clear')
-#	PStatus = GPIO.input(21)
-#        LStatus = GPIO.input(12)
-	print now
+#       os.system('clear')
+	PStatus = GPIO.input(21)
+        LStatus = GPIO.input(12)
+	print T
 	print ""
-#        print "Light: ",LStatus, "Pump: ", PStatus 
+        print "Light: ",LStatus, "Pump: ", PStatus 
         print "Pump Bed1 Volume: ", flow3,"L"
         print "Drain Bed1 Volume: ", flow1,"L\t", flow1b,"L"
         print ""
@@ -188,7 +171,7 @@ def Flood():
         	        if Oldflow3 != flow3:
                 	        print "Flood bed 1"
                         	Bed="0"
-	                elif Oldflow4 != flow4:
+	        	elif Oldflow4 != flow4:
         	                print "Flood bed 2"
                 	        Bed="1"
 	                if option != Bed:
@@ -196,6 +179,7 @@ def Flood():
                 	        Valve(option)
                         	GPIO.output(21, GPIO.HIGH)
 			if SinceLastMin > 30:
+				DataWrite()
 				now = datetime.now()
 				NextFlood = now + DT.timedelta(hours = int(period))
                                 Farm = mysql.connector.connect(
@@ -217,9 +201,7 @@ def Flood():
 	        if Oldflow2 != flow2:
         	        Valve("0")
                 	GPIO.output(21, GPIO.LOW)
-#	                GPIO.cleanup()
-#        	        sys.exit()
-
+		
 
 def Valve(dir):
         now = datetime.now()
@@ -269,6 +251,28 @@ def countPulse(channel):
 	global option
 #	now = datetime.now()
 #	T = now.strftime("%H:%M:%S")
+	VD=dbRead('VolDrain')
+	date = VD[0]
+	HD1 = VD[1]
+	Hall1 = VD[2]
+	HD2 = VD[3]
+	Hall2 = VD[4]
+	HD3 = VD[5]
+	Hall3 = VD[6]
+	HD4 = VD[7]
+	Hall4 = VD[8]
+	VolBed1 = VD[9]
+	VolBed2 = VD[10]
+	Farm = mysql.connector.connect(
+		host="localhost",
+		user="pi",
+		passwd="a-51d41e",
+		database="Farm"
+	)
+	now = datetime.datetime.now()
+	now = now.strftime("%Y-%m-%d %H:%M:%S")
+	DV = Farm.cursor()
+	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
 	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			option = 1
@@ -278,6 +282,7 @@ def countPulse(channel):
 			Oldflow1b = flow1b
 			flow1 = round((count1 / (60 * 28.3906)),3)
 			flow1b = round((count3 / (60 * 28.3906)),3)
+			val = (now, now, "1", HD2, Hall2, HD3, Hall3, HD4, Hall4, VolBed1, VolBed2)
 	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 1
@@ -286,16 +291,22 @@ def countPulse(channel):
 			Oldflow2b = flow2b
 			flow2 = round(count2 / (60 * 28.3906),3)
 			flow2b = round(count4 / (60 * 28.3906),3)
+			val = (now, HD1, Hall1, now, "1", HD3, Hall3, HD4, Hall4, VolBed1, VolBed2)
 	if (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        count3 = count3 + 1
 			Oldflow3 = flow3
 			flow3 = round(count3 / (60 * 28.3906),3)
+			val = (now, HD1, Hall1, HD2, Hall2, now, "1", now, "0", VolBed1, VolBed2)
         if (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
 			Oldflow4 = flow4
 			flow4 = round(count4 / (60 * 28.3906),3)
+			val = (now, HD1, Hall1, HD2, Hall2, now , "0", now, "1", VolBed1, VolBed2)
+	DV.execute(sql, val)
+	DV.close
+	Farm.commit()
 class atlas_i2c:
                 long_timeout = 1.5 # the timeout needed to query readings and calibrations
                 short_timeout = .5 # timeout for regular commands
@@ -425,6 +436,7 @@ def pHECT():
                         H2O.close
                         Farm.commit()
                         time.sleep(1)
+			DataWrite()
                 except KeyboardInterrupt:
                         # Reset GPIO settings
                         GPIO.cleanup()
@@ -505,6 +517,48 @@ def dbRead(table):
                         except TypeError:
                                 pass
 
+
+def DataWrite():
+		Date = datetime.now()
+		Date = Date.strftime("%Y-%m-%d %H:%M:%S")
+		now = datetime.datetime.now()
+		now = now.strftime("%H:%M:%S")
+	
+		main = GPIO.input(26)
+		Lights = GPIO.input(12)
+		APump = GPIO.input(16)
+		ExFan = GPIO.input(20)
+		WPump = GPIO.input(21)
+		ValveS = GPIO.input(5)
+		ValveD = GPIO.input(6)
+
+		Act=dbRead('Data')
+		LDate = Act[0]
+		Lmain = Act[1]
+		Llight = Act[2]
+		LExFan = Act[3]
+		LAPump = Act[4]
+		LWPump = Act[5]
+		LValveS = Act[6]
+		LValveD = Act[7]
+		Farm = mysql.connector.connect(
+				host="localhost",
+				user="pi",
+				passwd="a-51d41e",
+				database="Farm"
+		)
+
+		SheD = Farm.cursor()
+		# select * from farmdata order by date desc limit 1;
+		# +---------------------+------+--------+-------+---------+-----------+------+------+------+
+		# | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD | Hall |
+		# +---------------------+------+--------+-------+---------+-----------+------+------+------+
+		# | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |  On  |
+		# +---------------------+------+--------+-------+---------+-----------+------+------+------+
+		sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+		val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD)
+		SheD.execute(sql, val)
+		Farm.commit()
 
 
 if __name__=="__main__":
