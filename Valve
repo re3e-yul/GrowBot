@@ -7,7 +7,7 @@ Master=$(raspi-gpio get 5 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
 Dir=$(raspi-gpio get 6 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
 
 case $valve in
-c|C|-c|-C|--cycle)
+0|c|C|-c|-C|--cycle)
 	if [ $Dir -eq "1" ]
         then
 		#echo $valve $Dir
@@ -20,7 +20,7 @@ c|C|-c|-C|--cycle)
 		raspi-gpio set 5 dh
 	fi
   ;;
-f|F|-f|-F|--feed)
+1|f|F|-f|-F|--feed)
 	if [ $Dir -eq "0" ]
         then
 		#echo $valve $Dir
