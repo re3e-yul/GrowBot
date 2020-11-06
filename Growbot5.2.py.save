@@ -29,8 +29,6 @@ GPIO.setup(DrainBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(20, GPIO.OUT)
-GPIO.setup(5, GPIO.IN)
-GPIO.setup(6, GPIO.IN)
 GPIO.setup(16, GPIO.OUT)
 GPIO.setup(Main, GPIO.OUT)
 GPIO.setup(Pump, GPIO.OUT, initial=GPIO.LOW)
@@ -133,7 +131,7 @@ def main():
 				Display(now, T, flow1, flow1b, flow2,flow2b, flow3, flow4, threadStat, thread2Stat, Deamonstat,LStatus, PStatus)
 				time.sleep(1)
 			else:
-				LogString="Drain1:", flow1, flow1b, "Drain2:", flow2, flow2b, "Pump1:", flow3, "Pump2:", flow4, "SensorThread:", threadStat, "ActuatorThread:", thread2Stat, "RunLevel:", Deamonstat, "Lights:", LStatus, "Pump:", PStatus
+				LogString="Drain1:", flow1, flow1b, "Drain2:", flow2, flow2b, "Pump1:", flow3, "Pump2:", flow4, "SensorThread:", threadStat, "ActuatorThread:", thread2Stat, "Deamon:", Deamonstat, "Lights:", LStatus, "Pump:", PStatus
 				LogString=str(LogString)
 				syslog.syslog(syslog.LOG_INFO,LogString)
 				time.sleep(1)
@@ -146,7 +144,7 @@ def Actuators():
 
 	while True:
 		Light()
-#        	Flood()
+        	Flood()
 		DataWrite()
 		time.sleep(1)
 
@@ -462,11 +460,11 @@ def pHECT():
                                         temp = (float(temp.strip("t=")) /1000 )
                                 except:
                                         pass
-                        if temp > 45:
-                                temp = '28'
-                        if temp > 29.8 and temp < 45:
+#                        if temp > 45:
+#                                temp = '28'
+                        if temp > 29.8: # and temp < 45:
                                 GPIO.output(20, GPIO.HIGH)
-                        elif temp < 28.3  or temp > 50:
+                        elif temp < 28.3: # or temp > 50:
                                 GPIO.output(20, GPIO.LOW)
 
 			last=dbRead('H2O')
