@@ -243,8 +243,6 @@ def countPulse(channel):
         global flow3
         global flow4
 	global Sensor
-	PStatus = GPIO.input(21)
-	ValveD = GPIO.input(6)
 	Farm = mysql.connector.connect(
 		host="localhost",
 		user="pi",
@@ -265,11 +263,11 @@ def countPulse(channel):
 			count4 = count4 - 1
 			flow2 = round(count2 / (60 * 28.3906),3)
 			flow4 = round(count4 / (60 * 28.3906),3)
-	if PStatus and not ValveD and (channel == PumpBed1):
+	if (channel == PumpBed1):
 			Sensor = "Pump 1"
-		        count3 = count3 + 2
+		        count3 = count3 + 1
 			flow3 = round(count3 / (60 * 28.3906),3)
-        if PStatus and ValveD and (channel == PumpBed2):
+        if (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
 			flow4 = round(count4 / (60 * 28.3906),3)
@@ -290,7 +288,6 @@ def Valve(dir):
                         t_end = time.time() + 13
                         while time.time() < t_end:
                                 Display()
-				HallWrite()
                         GPIO.output(5, GPIO.HIGH)
                 if not ValveD:
                         GPIO.output(5, GPIO.LOW)
@@ -298,7 +295,6 @@ def Valve(dir):
                         t_end = time.time() + 13
                         while time.time() < t_end:
                                 Display()
-				HallWrite()
                         GPIO.output(5, GPIO.HIGH)
 
 def dbRead(table):
@@ -455,27 +451,25 @@ def HallReset():
 	        VolBed2 = VD[10]
 		PStatus = GPIO.input(21)
 		VD = Farm.cursor()
-		if   timediff_DH1 > 4:
-			flow3 = "0"
+		if not PStatus and h1 and timediff_DH1 > 4:
 			sql = """UPDATE VolDrain SET date = %s, DH1 = %s, Hall1 = %s, VolBed1 = %s where date = (select date from VolDrain order by date desc limit 1)"""
 			data = (Date, Date, "0", "0")
 			VD.execute(sql, data)
 			VD.close
 	        	Farm.commit()
-               	if   timediff_DH2 > 4:
-			flow4 = "0"
+               	if  not PStatus and h2 and timediff_DH2 > 4:
                        	sql = """UPDATE VolDrain SET date = %s, DH2 = %s, Hall2 = %s, VolBed2 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                        	data = (Date, Date, "0", "0")
                        	VD.execute(sql, data)
                        	VD.close
                        	Farm.commit()
-               	if   timediff_DH3 > 4 :
+               	if h3 and timediff_DH3 > 4 :
                        	sql = """UPDATE VolDrain SET date = %s, DH3 = %s, Hall3 = %s, VolBed1 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                        	data = (Date, Date, "0", VolBed1)
                        	VD.execute(sql, data)
                        	VD.close
                        	Farm.commit()
-               	if   timediff_DH4 > 4:
+               	if  h4 and timediff_DH4 > 4:
                        	sql = """UPDATE VolDrain SET date = %s, DH4 = %s, Hall4 = %s, VolBed2 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                        	data = (Date, Date, "0", VolBed1)
 			VD.execute(sql, data)
@@ -510,8 +504,6 @@ def Display():
 	time.sleep(0.1)
 
 def HallWrite():
-	global flow3 
-        global flow4
 	global Oflow3 
 	global Oflow4
 	if Oflow3 <= 0:
@@ -542,38 +534,23 @@ def HallWrite():
 	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
 	if Oflow3 != flow3:
 		if Oflow3 > flow3:
-			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, flow4) #VolBed2)
+			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, VolBed2)
 		else:
-                        data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4) #VolBed2)
-
-	elif h1 or h3 and Oflow3 == flow3:
-		data = (Date, Date, "0", HD2, h2, HD3, "0", HD4, h4, "0", flow4)
-		flow3 = "0"
-		Sensor = ""
-	try:
+                        data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, h4, flow3, VolBed2)
 		DV.execute(sql, data)
-        	DV.close
-        	Farm.commit()
-	except:
-		pass
-	if Oflow4 != flow4:
-		if Oflow4 > flow4:
-			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, flow3, flow4) #VolBed1, flow4)
-		else:
-			data = (Date, HD1,h1, HD2, h2, HD3, "0", Date, "1", flow3, flow4) #VolBed1, flow4)
-	elif h2 or h4 and Oflow4 == flow4:
-                data = (Date, HD1, h1, Date, "0", HD3, h3, Date, "0", flow3, "0")
-		flow4 = "0"
-		Sensor = ""
-        try:
-                DV.execute(sql, data)
                 DV.close
                 Farm.commit()
-        except:
-                pass
+	if Oflow4 != flow4:
+		if Oflow4 > flow4:
+			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, VolBed1, flow4)
+	        else:
+			data = (Date, HD1,h1, HD2, h2, HD3, h3, Date, "1", VolBed1, flow4)
+	        DV.execute(sql, data)
+      		DV.close
+      		Farm.commit()
         Oflow3 = flow3 
         Oflow4 = flow4
-	time.sleep(1)
+
 def Light():
         Shed=dbRead('Shed')
         try:
@@ -610,14 +587,14 @@ def Flood():
 		period = Shed[2]
 		LastFlood = Shed[3]
         	NextFlood = Shed[4]
-		SinceLast = now-LastFlood
-		SinceLastMin = SinceLast.seconds / 60
 	except:
 		period =  "24"
 		NextFlood = now
-		LastFlood = (now - DT.timedelta(days = 1))
-		SinceLast = now-LastFlood
-		SinceLastMin = "31"
+		if not LastFlood:
+			LastFlood = (now - DT.timedelta(days = 1))
+			LastFlood = LastFlood.strftime("%Y-%m-%d %H:%M:%S")
+			SinceLast = now-LastFlood
+	SinceLastMin = SinceLast.seconds / 60
 	if now >= NextFlood:
 		if not PStatus and flow1 == 0 and flow2 == 0:
 			Valve(0)
@@ -644,17 +621,15 @@ def Flood():
                                 SheD.execute(sql,data)
                                 SheD.close
                                 Farm.commit()
-#				while flow2 < (flow4 / 5):
-#					Display()
-#					HallWrite()
-#				DataWrite()
+				while flow2 < (flow4 / 5):
+					Display()
+				DataWrite()
 
 		elif flow1 > 0.12 and not ValveD:
-			#print flow1
+			print flow1
 			GPIO.output(21, GPIO.LOW)
-			while flow1 < (flow3 / 6):
+			while flow1 < (flow3 / 4):
 				Display()
-				HallWrite()
 			Valve(1)
 			GPIO.output(21, GPIO.HIGH)
 			DataWrite()
