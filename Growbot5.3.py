@@ -69,7 +69,7 @@ global EC
 global TDS
 global S
 global SG
-temp = "0.00"
+temp = 0
 pH = 0
 EC = 0
 TDS = 0
@@ -189,17 +189,19 @@ def pHECT():
 	global TDS
 	global S
 	global SG
-	ECs = 0
-	temp = 0  
+#	ECs = 0
+#	temp = 0  
+	GPIO.setmode(GPIO.BCM)
 	while True:
-                        GPIO.setmode(GPIO.BCM)
-                        now = datetime.now()
+			now = datetime.now()
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
 #                        pH = 0
-                        while pH == 0 or pH == "Error 254" or pH == "Error 255":
+                        pH = Atlas(99,"r")
+                        while pH == "Error 254" or pH == "Error 255":
                                 pH = Atlas(99,"r")
 #                        ECs = 0 
-                        while ECs == 0 or ECs == "Error 254" or ECs == "Error 255" or ECs == "?I,EC,2.12":
+                        ECs = Atlas(100,"r")
+                        while ECs == "Error 254" or ECs == "Error 255" or ECs == "?I,EC,2.12":
                                 ECs = Atlas(100,"r")
                         ECs.split(',')
                         Ec,TDS,S,SG = ECs.split(',')
@@ -212,26 +214,23 @@ def pHECT():
                         ########
                         path = "/sys/bus/w1/devices/"
                         dir_list = os.listdir(path)
-                        while temp == 0 :
-                                for path in dir_list:
-                                        if '28' in path:
-                                                path = "/sys/bus/w1/devices/" + path + "/w1_slave"
-                                                f = open(path, "r")
-                                                for last_line in f:
-                                                        pass
-                                try:
-                                        temp = last_line.split()
-                                        temp = str(temp[-1])
-                                        temp = (float(temp.strip("t=")) /1000 )
-                                except:
-                                        pass
+                        for path in dir_list:
+	                        if '28' in path:
+		                	path = "/sys/bus/w1/devices/" + path + "/w1_slave"
+                	                f = open(path, "r")
+                        	        for last_line in f:
+        	                	        try:
+                	                	        temp = last_line.split()
+                                                	temp = str(temp[-1])
+	                                                temp = (float(temp.strip("t=")) /1000 )
+        	                                except:
+                	         	               pass
                         if temp > 45:
                                 temp = '28'
                         if temp > 29.8 and temp < 45:
                                 GPIO.output(20, GPIO.HIGH)
                         elif temp < 28.3  or temp > 50:
                                 GPIO.output(20, GPIO.LOW)
-
 			last=dbRead('H2O')
                 	LDate = last[0]
 			date = datetime.now()
@@ -252,7 +251,7 @@ def pHECT():
                         	Farm.commit()
 				DataWrite()
 				Calibrate(pH,ECs)
-			
+
 def truncate(n, decimals=0):
     multiplier = 1 ** decimals
     return int(n * multiplier) / multiplier
@@ -528,11 +527,8 @@ def Display():
 	PStatus = GPIO.input(21)
 	FStatus = GPIO.input(20)
 	Shed=dbRead('Shed')
-        try:
-		LastFlood =Shed[3]
-		NextFlood = Shed[4]
-	except:
-		NextFlood = now
+	LastFlood =Shed[3]
+	NextFlood = Shed[4]
         if LStatus:
                 Lstatus = "On"
         else:
@@ -545,28 +541,12 @@ def Display():
                 Fstatus = "On"
         else:
                 Fstatus = "Off"
-	while not temp  or not pH or not EC:
-		now = datetime.now()
-	        T = now.strftime("%H:%M:%S")
-		os.system('clear')
-		print T
-	        print ""
-		print "Init...."
-		time.sleep(0.3)
 	os.system('clear')
         print T
 	print ""
-	try:
-		if not Sensor:
-			Sensor = ""
-			print "Lights:",Lstatus, Sensor, "\t\t Temp: ", temp,"c\t\tpH: ", pH, "\t EC: ", EC,"ppm"
-	except UnboundLocalError:
-			Sensor = ""
-			print "Lights:",Lstatus, Sensor, "\t\t Temp: ", temp,"c\tpH: ", pH, "\t EC: ", EC,"ppm"
-	if Sensor:
-	        print "Lights:/t",Lstatus, Sensor, "\t Temp: ", temp,"\tc\tpH: ", pH, "\t EC: ", EC,"ppm"
+        print "Lights:/t",Lstatus, "\t Temp: ", ('%2.3f' %temp),"c\tpH: ", pH, "\t\t EC: ", EC,"ppm"
 	print "Pump:\t", Pstatus, "\t\t\t\t\t\t\t TDS:", TDS,"ppm"
-	print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t S:", S,"ppm"
+	print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t S  :", S,"ppm"
 	print "\t\t\t\t\t\t\t\t SG:  ",SG
         print "" 
         print "\t   LastFlood", LastFlood, "\t\tDispensed pH-/pH+\t", pHDn,"/",pHUp
@@ -575,7 +555,6 @@ def Display():
         print ""
         print "\t\tPump Bed1 Volume: ", flow3,"L"
         print "\t\tPump Bed2 Volume: ", flow4,"L"
-	#time.sleep(0.1)
 
 def HallWrite():
 	global flow3 
@@ -685,7 +664,7 @@ def Flood():
                         if SinceLastMin > 30:
                                 DataWrite()
                                 now = datetime.now()
-                                NextFlood = LastFlood + DT.timedelta(hours = int(period))
+                                NextFlood = now + DT.timedelta(hours = int(period))
                                 Farm = mysql.connector.connect(
                                         host="localhost",
                                         user="pi",
@@ -698,7 +677,6 @@ def Flood():
                                 SheD.execute(sql,data)
                                 SheD.close
                                 Farm.commit()
-				#time.sleep(0.4)
 
 		elif flow1 > 0.12 and not ValveD:
 			#print flow1
@@ -724,11 +702,9 @@ def Calibrate(pH,ECs):
 	if pH < 5:
 		pHUp = Atlas(102,"D,?")
 		pHUp = pHUp[+3:-2]
-	        print pH, "Dispenced ", pHUp, "pH+"
 	elif pH > 6:
 		pHDn = Atlas(101,"D,?")
 		pHDn = pHDn[+3:-2]
-		print pH, "Dispensed", pHDn, " pH-"
 	if EC < 2000:
 		GrowA = Atlas(103,"D,?")
 		GrowB = Atlas(104,"D,?")
@@ -757,6 +733,9 @@ def Calibrate(pH,ECs):
 
 #	"select (MAX(pH) - MIN(pH))/COUNT(pH) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 2 HOUR );"
 #        "select (MAX(EC) - MIN(EC))/COUNT(EC) as ECVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 2 HOUR );"
+
+
+
 def Main():
 	global action
 	try:
