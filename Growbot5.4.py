@@ -203,7 +203,7 @@ def pHECT():
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
 #                        pH = 0
                         pH = Atlas(99,"r")
-                        while pH == "Error 254" or pH == "Error 255":
+                        while pH == "error 254" or pH == "Error 255":
                                 pH = Atlas(99,"r")
 #                        ECs = 0 
                         ECs = Atlas(100,"r")
@@ -542,6 +542,14 @@ def Display():
 	Shed=dbRead('Shed')
 	LastFlood =Shed[3]
 	NextFlood = Shed[4]
+	H2O=dbRead('H2O')
+	date = H2O[0]
+        temp = H2O[1]
+        pH = H2O[2]
+        EC = H2O[3]
+        TDS = H2O[4]
+        S = H2O[5]
+        SG = H2O[6]	
         if LStatus:
                 Lstatus = "On"
         else:
@@ -769,70 +777,69 @@ def Main():
 	Deamonstat = os.system('service growbot status')
 	if Deamonstat == 768:
 		Deamonstat = "UserLand"
-	elif Deamonstat == 0:
+	elif Deamonstat == 2:
 		Deamonstat = "Deamon"
+	else:
+		Deamonstat = Deamonstat
 	while True:
-#		Shed=dbRead('Shed')
-#        	LastFlood = str(Shed[3])
-#	        NextFlood = str(Shed[4])
-		Sensor = ""
-    		try:
-    			if thread.is_alive() is False:
-				threadStat = "not running"
-       		        	print "starting Chemical sensors task"
-        	        	thread = ReadSensors(pHECT) 
-				thread.setDaemon(True)
-				thread.start()
-			else:
-                                threadStat = "running"
+		if Deamonstat == "UserLand":
+#			Shed=dbRead('Shed')
+#       	 	LastFlood = str(Shed[3])
+#	        	NextFlood = str(Shed[4])
+			Sensor = ""
+	    		try:
+    				if thread.is_alive() is False:
+					threadStat = "not running"
+       		        		print "starting Chemical sensors task"
+        	        		thread = ReadSensors(pHECT) 
+					thread.setDaemon(True)
+					thread.start()
+				else:
+                        	        threadStat = "running"
 
-                        if thread2.is_alive() is False:
-                                threadStat2 = "not running"
-                                print "Running Hall watcher task"
-                                thread2 = Write_Hall(HallReset) 
-                                thread2.setDaemon(False) #True)
-                                thread2.start()
-                        else:
-                                threadStat2 = "running"
-                        try:
-				GPIO.add_event_detect(DrainBed1, GPIO.FALLING, callback=countPulse)
-                        except:
-                                pass
-                        try:
-				GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
-                        except:
-                                pass
-                        try:
-				GPIO.add_event_detect(PumpBed1, GPIO.FALLING, callback=countPulse)
-                        except:
-                                pass
-                        try:
-				GPIO.add_event_detect(PumpBed2, GPIO.FALLING, callback=countPulse)
-                        except:
-                                pass
+	                        if thread2.is_alive() is False:
+        	                        threadStat2 = "not running"
+                	                print "Running Hall watcher task"
+                        	        thread2 = Write_Hall(HallReset) 
+                                	thread2.setDaemon(False) #True)
+	                                thread2.start()
+        	                else:
+                	                threadStat2 = "running"
+                        	try:
+					GPIO.add_event_detect(DrainBed1, GPIO.FALLING, callback=countPulse)
+	                        except:
+        	                        pass
+                	        try:
+					GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
+	                        except:	
+        	                        pass
+                	        try:
+					GPIO.add_event_detect(PumpBed1, GPIO.FALLING, callback=countPulse)
+	                        except:
+        	                        pass
+                	        try:
+					GPIO.add_event_detect(PumpBed2, GPIO.FALLING, callback=countPulse)
+	                        except:
+        	                        pass
 
-			LStatus = GPIO.input(12)
-		        PStatus = GPIO.input(21)
-			FStatus = GPIO.input(20)
-    			Light()
-			Flood()
-			HallWrite()
-			if Deamonstat == "UserLand":
-				Display()
-			else:
+				LStatus = GPIO.input(12)
+		        	PStatus = GPIO.input(21)
+				FStatus = GPIO.input(20)
+    				Light()
+				Flood()
+				HallWrite()
 				try:
 					LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", LastFlood,"NextFlood", NextFlood,"flow3", flow3,"flow4", flow4,"pH", pH,"EC", EC,"S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
 					LogString=str(LogString)
 					syslog.syslog(syslog.LOG_INFO,LogString)
 				except NameError:
 					pass
-#				time.sleep(1)
-    		except KeyboardInterrupt:
-	
-        		print '\ncaught keyboard interrupt!, bye'
-        		GPIO.cleanup()
-        		sys.exit()
-
+	    		except KeyboardInterrupt:
+	        		print '\ncaught keyboard interrupt!, bye'
+        			GPIO.cleanup()
+        			sys.exit()
+	        if Deamonstat == "Deamon":
+			Display()
 if __name__=="__main__":
 
         Main()

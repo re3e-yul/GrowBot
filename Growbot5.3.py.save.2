@@ -231,8 +231,8 @@ def pHECT():
 	                                                temp = (float(temp.strip("t=")) /1000 )
         	                                except:
                 	         	               pass
-                        if temp > 45:
-                                temp = '28'
+#                        if temp > 45:
+#                               temp = '28'
                         if temp > 29.8 and temp < 45:
                                 GPIO.output(20, GPIO.HIGH)
                         elif temp < 28.3  or temp > 50:
@@ -669,8 +669,6 @@ def Flood():
 		SinceLast = now-LastFlood
 		SinceLastMin = "31"
 	if now >= NextFlood:
-		print LastFlood, NextFlood,"2", flow1, flow2
-		time.sleep(2)
 		if not PStatus  and flow1 == 0 and flow2 == 0:
 			Valve(0)
 			GPIO.output(26, GPIO.HIGH)
@@ -709,8 +707,6 @@ def Flood():
 			DataWrite()
 		else:
 			HallWrite()
-	return LastFlood, NextFlood
-
 
 def Calibrate(pH,ECs):
 	global pHUp
@@ -767,14 +763,14 @@ def Main():
 	thread = ReadSensors(pHECT)
 	thread2 = Write_Hall(HallReset)
 	Deamonstat = os.system('service growbot status')
-	if Deamonstat == 768:
+	if Deamonstat == 2:
 		Deamonstat = "UserLand"
 	elif Deamonstat == 0:
 		Deamonstat = "Deamon"
 	while True:
-#		Shed=dbRead('Shed')
-#        	LastFlood = str(Shed[3])
-#	        NextFlood = str(Shed[4])
+		Shed=dbRead('Shed')
+        	LastFlood = str(Shed[3])
+	        NextFlood = str(Shed[4])
 		Sensor = ""
     		try:
     			if thread.is_alive() is False:
@@ -826,7 +822,7 @@ def Main():
 					syslog.syslog(syslog.LOG_INFO,LogString)
 				except NameError:
 					pass
-#				time.sleep(1)
+				time.sleep(1)
     		except KeyboardInterrupt:
 	
         		print '\ncaught keyboard interrupt!, bye'
