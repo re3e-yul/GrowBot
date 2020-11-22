@@ -10,6 +10,7 @@ import threading
 import io
 import fcntl
 import syslog
+import getpass
 Pump = 21
 Valve = 5
 VDir = 6
@@ -203,7 +204,7 @@ def pHECT():
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
 #                        pH = 0
                         pH = Atlas(99,"r")
-                        while pH == "error 254" or pH == "Error 255":
+                        while pH == "Error 254" or pH == "Error 255":
                                 pH = Atlas(99,"r")
 #                        ECs = 0 
                         ECs = Atlas(100,"r")
@@ -774,18 +775,18 @@ def Main():
 		option = "a"
 	thread = ReadSensors(pHECT)
 	thread2 = Write_Hall(HallReset)
-	Deamonstat = os.system('service growbot status')
-	if Deamonstat == 768:
+	Deamonstat = os.system('systemctl is-active  growbot')
+#	Deamonstat = os.system('service growbot status')
+	if Deamonstat == 768 or Deamonstat == "inactive":
 		Deamonstat = "UserLand"
-	elif Deamonstat == 2:
+		os.system('systemctl start growbot')
+	elif Deamonstat == 0 or Deamonstat == "active":
 		Deamonstat = "Deamon"
 	else:
 		Deamonstat = Deamonstat
+	context=getpass.getuser()
 	while True:
-		if Deamonstat == "UserLand":
-#			Shed=dbRead('Shed')
-#       	 	LastFlood = str(Shed[3])
-#	        	NextFlood = str(Shed[4])
+		if context == "root":
 			Sensor = ""
 	    		try:
     				if thread.is_alive() is False:
@@ -828,6 +829,7 @@ def Main():
     				Light()
 				Flood()
 				HallWrite()
+				
 				try:
 					LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", LastFlood,"NextFlood", NextFlood,"flow3", flow3,"flow4", flow4,"pH", pH,"EC", EC,"S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
 					LogString=str(LogString)
@@ -838,7 +840,7 @@ def Main():
 	        		print '\ncaught keyboard interrupt!, bye'
         			GPIO.cleanup()
         			sys.exit()
-	        if Deamonstat == "Deamon":
+	        if context == "pi":
 			Display()
 if __name__=="__main__":
 
