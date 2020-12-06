@@ -286,23 +286,23 @@ def countPulse(channel):
 	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			count1 = count1 + 1
-			count3 = count3 - 1.7
-			flow1 = round((count1 / (60 * 14.19)),3)
-			flow3 = round((count3 / (60 * 14.19)),3)
+			count3 = count3 - 1.6
+			flow1 = round((count1 / (60 * 28.3906)),3)
+			flow3 = round((count3 / (60 * 28.3906)),3)
 	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 1
-			count4 = count4 - 1.2
-			flow2 = round(count2 / (60 * 14.19),3)
-			flow4 = round(count4 / (60 * 14.19),3)
+			count4 = count4 - 1.1
+			flow2 = round(count2 / (60 * 28.3906),3)
+			flow4 = round(count4 / (60 * 28.3906),3)
 	if PStatus and not ValveD and (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        count3 = count3 + 1.5
-			flow3 = round(count3 / (60 * 14.19),3)
+			flow3 = round(count3 / (60 * 28.3906),3)
         if PStatus and ValveD and (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
-			flow4 = round(count4 / (60 * 14.19),3)
+			flow4 = round(count4 / (60 * 28.3906),3)
 	if flow3 <= 0:
 		flow3 = 0
 	if flow4 <= 0:
@@ -492,7 +492,7 @@ def HallReset():
 			Farm.close
 			flow3 = 0
 			flow4 = 0
-		if  h1 and timediff_DH1 > 90:
+		if  h1 and timediff_DH1 > 15:
 			flow3 = "0"
 			sql = """UPDATE VolDrain SET date = %s, DH1 = %s, Hall1 = %s, VolBed1 = %s where date = (select date from VolDrain order by date desc limit 1)"""
 			data = (Date, Date, "0", "0")
@@ -500,7 +500,7 @@ def HallReset():
 			VD.close
         		Farm.commit()
 			Farm.close
-               	if h2 and timediff_DH2 > 90:
+               	if h2 and timediff_DH2 > 15:
 			flow4 = "0"
                	       	sql = """UPDATE VolDrain SET date = %s, DH2 = %s, Hall2 = %s, VolBed2 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                		data = (Date, Date, "0", "0")
@@ -557,20 +557,16 @@ def Display():
                 Fstatus = "On"
         else:
                 Fstatus = "Off"
-	if ValveD:
-		ValveD = "bed 1"
-	else:
-		ValveD = "bed 0"
 	os.system('clear')
         print T
 	print ""
 	try:
-	        print "Lights:\t",Lstatus, "\tTemp: ", ('%2.3f' %temp),"c\t\tpH: ", pH, "\t EC: ", EC,"ppm"
+	        print "Lights:\t",Lstatus, "\t Temp: ", ('%2.3f' %temp),"c\t\tpH: ", pH, "\t EC: ", EC,"ppm"
 	except:
 		pass
-	print "Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t TDS:", TDS,"ppm"
-	print "Fan:\t", Fstatus, "\t\t\t\t\t\t S  :", S,"ppm"
-	print "\t\t\t\t\t\t\t SG:  ",SG
+	print "Pump:\t", Pstatus, "\t\t\t\t\t\t\t TDS:", TDS,"ppm"
+	print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t S  :", S,"ppm"
+	print "\t\t\t\t\t\t\t\t SG:  ",SG
         print "" 
         print "\t   LastFlood", LastFlood, "\t\tDispensed pH-/pH+\t", pHDn,"/",pHUp
 	print "\t   NextFlood", NextFlood, "\t\tDispensed GrowA/GrowB\t0.00 / 0.00"
@@ -616,16 +612,12 @@ def HallWrite():
 		if Oflow3 > flow3:
 			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, flow4)
 		else:
-                       	data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4)
-#	else:
-#		data = (Date, Date, "0", HD2, h2, HD3, h3, HD4, h4, "0", flow4)
+                        data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4)
 	if Oflow4 != flow4:
 		if Oflow4 > flow4:
 			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, flow3, flow4)
 		else:
 			data = (Date, HD1,h1, HD2, h2, HD3, "0", Date, "1", flow3, flow4)
-#	else:
-#		data = (Date, HD1,h1,Date, "0", h3, HD4, h4, flow3, "0")
         try:
                 DV.execute(sql, data)
                 DV.close
@@ -705,13 +697,11 @@ def Flood():
                                 )
                                 SheD = Farm.cursor() 
 				sql = "INSERT INTO Farm.Shed (date, mode, period, LastFlood, NextFlood) VALUES (%s, %s, %s, %s,%s)"
-                                data = (now,mode,period,now,NextFlood)
+                                data = (now,mode,period,LastFlood,NextFlood)
                                 SheD.execute(sql,data)
                                 SheD.close
                                 Farm.commit()
 				Farm.close
-#				flow1 = 0
-#				flow2 = 0
 			else:
 				GPIO.output(21, GPIO.LOW)
 		elif flow1 > 0.12 and not ValveD:
@@ -809,19 +799,19 @@ def Main():
         	                else:
                 	                threadStat2 = "running"
                         	try:
-					GPIO.add_event_detect(DrainBed1, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(DrainBed1, GPIO.FALLING, callback=countPulse)
 	                        except:
         	                        pass
                 	        try:
-					GPIO.add_event_detect(DrainBed2, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
 	                        except:	
         	                        pass
                 	        try:
-					GPIO.add_event_detect(PumpBed1, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(PumpBed1, GPIO.FALLING, callback=countPulse)
 	                        except:
         	                        pass
                 	        try:
-					GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(PumpBed2, GPIO.FALLING, callback=countPulse)
 	                        except:
         	                        pass
 

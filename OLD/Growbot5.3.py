@@ -10,9 +10,6 @@ import threading
 import io
 import fcntl
 import syslog
-import getpass
-import select
-
 Pump = 21
 Valve = 5
 VDir = 6
@@ -27,7 +24,6 @@ ExFan = 20
 Pump = 21
 ValveS = 5
 ValveD = 6
-
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(26, GPIO.OUT)
@@ -77,7 +73,6 @@ global S
 global SG
 global LastFlood
 global NextFlood
-
 temp = 0
 pH = 0
 EC = 0
@@ -176,6 +171,7 @@ def Atlas(addr,verb):
 				return value
                 except IOError:
                                 "No I2C port detected"
+#                return value
 
 class ReadSensors(threading.Thread):
         def __init__(self, Read_Chem_Sensors):
@@ -199,13 +195,17 @@ def pHECT():
 	global TDS
 	global S
 	global SG
+#	ECs = 0
+#	temp = 0  
 	GPIO.setmode(GPIO.BCM)
 	while True:
 			now = datetime.now()
                         now = now.strftime("%Y-%m-%d %H:%M:%S")
+#                        pH = 0
                         pH = Atlas(99,"r")
                         while pH == "Error 254" or pH == "Error 255":
                                 pH = Atlas(99,"r")
+#                        ECs = 0 
                         ECs = Atlas(100,"r")
                         while ECs == "Error 254" or ECs == "Error 255" or ECs == "?I,EC,2.12":
                                 ECs = Atlas(100,"r")
@@ -255,7 +255,6 @@ def pHECT():
                         	H2O.execute(sql, val)
                         	H2O.close
                         	Farm.commit()
-				Farm.close
 				DataWrite()
 				Calibrate(pH,ECs)
 
@@ -264,6 +263,8 @@ def truncate(n, decimals=0):
     return int(n * multiplier) / multiplier
 
 def countPulse(channel):
+#	global T
+#	T = 0
 	global count1
 	global count2
 	global count3
@@ -283,26 +284,28 @@ def countPulse(channel):
 		passwd="a-51d41e",
 		database="Farm"
 	)
+#	now = datetime.now()
+#	T = now.strftime("%H:%M:%S")
 	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			count1 = count1 + 1
-			count3 = count3 - 1.7
-			flow1 = round((count1 / (60 * 14.19)),3)
-			flow3 = round((count3 / (60 * 14.19)),3)
+			count3 = count3 - 1.6
+			flow1 = round((count1 / (60 * 28.3906)),3)
+			flow3 = round((count3 / (60 * 28.3906)),3)
 	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 1
-			count4 = count4 - 1.2
-			flow2 = round(count2 / (60 * 14.19),3)
-			flow4 = round(count4 / (60 * 14.19),3)
+			count4 = count4 - 1.1
+			flow2 = round(count2 / (60 * 28.3906),3)
+			flow4 = round(count4 / (60 * 28.3906),3)
 	if PStatus and not ValveD and (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        count3 = count3 + 1.5
-			flow3 = round(count3 / (60 * 14.19),3)
+			flow3 = round(count3 / (60 * 28.3906),3)
         if PStatus and ValveD and (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
-			flow4 = round(count4 / (60 * 14.19),3)
+			flow4 = round(count4 / (60 * 28.3906),3)
 	if flow3 <= 0:
 		flow3 = 0
 	if flow4 <= 0:
@@ -319,6 +322,7 @@ def Valve(dir):
                         GPIO.output(6, GPIO.LOW)
                         t_end = time.time() + 13
                         while time.time() < t_end:
+                                Display()
 				HallWrite()
                         GPIO.output(5, GPIO.HIGH)
                 if not ValveD:
@@ -326,12 +330,14 @@ def Valve(dir):
                         GPIO.output(6, GPIO.HIGH)
                         t_end = time.time() + 13
                         while time.time() < t_end:
+                                Display()
 				HallWrite()
                         GPIO.output(5, GPIO.HIGH)
 
 def dbRead(table):
-		Farm = mysql.connector.connect(
+                Farm = mysql.connector.connect(
                                 host="localhost",
+
                                 user="pi",
                                 passwd="a-51d41e",
                                 database="Farm"
@@ -341,7 +347,6 @@ def dbRead(table):
                         cursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
                         myresult = cursor.fetchone()
                         cursor.close
-			Farm.close
                         try:
                                 date = myresult[0]
                                 Temp = myresult[1]
@@ -357,7 +362,6 @@ def dbRead(table):
                         cursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
                         myresult = cursor.fetchone()
                         cursor.close
-			Farm.close
                         try:
                                 date = myresult[0]
                                 mode = myresult[1]
@@ -371,7 +375,6 @@ def dbRead(table):
                         cursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
                         myresult = cursor.fetchone()
                         cursor.close
-			Farm.close
                         try:
                                 date = myresult[0]
                                 main = myresult[1]
@@ -388,7 +391,6 @@ def dbRead(table):
                         cursor.execute("select * from Farm.VolDrain ORDER BY date DESC LIMIT 1")
                         myresult = cursor.fetchone()
                         cursor.close
-			Farm.close
                         try:
                                 date = myresult[0]
                                 HD1 = myresult[1]
@@ -404,7 +406,7 @@ def dbRead(table):
                                 return date,HD1,Hall1,HD2,Hall2,HD3,Hall3,HD4,Hall4,VolBed1,VolBed2
                         except TypeError:
                                 pass
-		Farm.close
+
 def DataWrite():
 		date = datetime.now()
 		Date = date.strftime("%Y-%m-%d %H:%M:%S")
@@ -449,7 +451,7 @@ def DataWrite():
 			SheD.execute(sql, val)
 			SheD.close
 			Farm.commit()
-			Farm.close
+
 
 def HallReset():
 	while True: 
@@ -464,11 +466,14 @@ def HallReset():
                 VolDrain = Farm.cursor()
 		VolDrain.execute ("select now(),TIMESTAMPDIFF(SECOND, (select DH1 from VolDrain order by date desc limit 1), now()) as timediff_DH1, TIMESTAMPDIFF(SECOND, (select DH2 from VolDrain order by date desc limit 1), now()) as timediff_DH2, TIMESTAMPDIFF(SECOND, (select DH3 from VolDrain order by date desc limit 1), now()) as timediff_DH3, TIMESTAMPDIFF(SECOND, (select DH4 from VolDrain order by date desc limit 1), now()) as timediff_DH4;")
 		myresult = VolDrain.fetchone()
+#		try:
               	date = myresult[0]
 		timediff_DH1 = myresult[1]
 		timediff_DH2 = myresult[2]
 		timediff_DH3 = myresult[3]
                	timediff_DH4 = myresult[4]
+#		except TypeError:
+#                      	        pass
 		VD=dbRead('VolDrain')
 	        date = VD[0]
 	        HD1 = VD[1]
@@ -483,68 +488,60 @@ def HallReset():
 	        VolBed2 = VD[10]
 		PStatus = GPIO.input(21)
 		VD = Farm.cursor()
+#		print "PStatus:",PStatus
+#		print "timediff_DH1:", h1, timediff_DH1
+#		print "timediff_DH2:", h2, timediff_DH2
+#		print "timediff_DH3:", h1, timediff_DH3
+#		print "timediff_DH4:", h4, timediff_DH4
+
 	        if not PStatus:
 			sql = """UPDATE VolDrain SET date = %s, DH3 = %s, Hall3 = %s,  DH4 = %s, Hall4 = %s  where date = (select date from VolDrain order by date desc limit 1)"""
         	        data = (Date, Date, "0", Date, "0")
 			VD.execute(sql, data)
                         VD.close 
                         Farm.commit()
-			Farm.close
 			flow3 = 0
 			flow4 = 0
-		if  h1 and timediff_DH1 > 90:
+#			print "reset Pump"
+		if  h1 and timediff_DH1 > 2:
 			flow3 = "0"
 			sql = """UPDATE VolDrain SET date = %s, DH1 = %s, Hall1 = %s, VolBed1 = %s where date = (select date from VolDrain order by date desc limit 1)"""
 			data = (Date, Date, "0", "0")
 			VD.execute(sql, data)
 			VD.close
         		Farm.commit()
-			Farm.close
-               	if h2 and timediff_DH2 > 90:
+#			print "reset dain1"
+               	if h2 and timediff_DH2 > 2:
 			flow4 = "0"
                	       	sql = """UPDATE VolDrain SET date = %s, DH2 = %s, Hall2 = %s, VolBed2 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                		data = (Date, Date, "0", "0")
                        	VD.execute(sql, data)
        	               	VD.close
                	       	Farm.commit()
-			Farm.close
-               	if h3 and timediff_DH3 > 5:
+#			print "reset dain2"
+               	if h3 and timediff_DH3 > 1 :
        	               	sql = """UPDATE VolDrain SET date = %s, DH3 = %s, Hall3 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                	       	data = (Date, Date, "0")
               		VD.execute(sql, data)
                        	VD.close
        	               	Farm.commit()
-			Farm.close
-      		if h4 and timediff_DH4 > 5:
+#			print "reset bed1+"
+      		if h4 and timediff_DH4 > 1:
               		sql = """UPDATE VolDrain SET date = %s, DH4 = %s, Hall4 = %s where date = (select date from VolDrain order by date desc limit 1)"""
                        	data = (Date, Date, "0")
 			VD.execute(sql, data)
        		       	VD.close
                		Farm.commit()
-			Farm.close
+#			print "reset bed2+"
 def Display():
 	now = datetime.now()
         T = now.strftime("%d-%m-%Y %H:%M:%S")
 	LStatus = GPIO.input(12)
 	PStatus = GPIO.input(21)
 	FStatus = GPIO.input(20)
-	ValveD = GPIO.input(6)
 	Shed=dbRead('Shed')
 	LastFlood =Shed[3]
 	NextFlood = Shed[4]
-	H2O=dbRead('H2O')
-	date = H2O[0]
-        temp = H2O[1]
-        pH = H2O[2]
-        EC = H2O[3]
-        TDS = H2O[4]
-        S = H2O[5]
-        SG = H2O[6]	
-#	H2O.close
-	Vol=dbRead('VolDrain')
-	VolBed1 = Vol[9]
-        VolBed2 = Vol[10]
-#	Vol.close
         if LStatus:
                 Lstatus = "On"
         else:
@@ -557,28 +554,23 @@ def Display():
                 Fstatus = "On"
         else:
                 Fstatus = "Off"
-	if ValveD:
-		ValveD = "bed 1"
-	else:
-		ValveD = "bed 0"
 	os.system('clear')
         print T
 	print ""
 	try:
-	        print "Lights:\t",Lstatus, "\tTemp: ", ('%2.3f' %temp),"c\t\tpH: ", pH, "\t EC: ", EC,"ppm"
+	        print "Lights:\t",Lstatus, "\t Temp: ", ('%2.3f' %temp),"c\t\tpH: ", pH, "\t EC: ", EC,"ppm"
 	except:
 		pass
-	print "Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t TDS:", TDS,"ppm"
-	print "Fan:\t", Fstatus, "\t\t\t\t\t\t S  :", S,"ppm"
-	print "\t\t\t\t\t\t\t SG:  ",SG
+	print "Pump:\t", Pstatus, "\t\t\t\t\t\t\t TDS:", TDS,"ppm"
+	print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t S  :", S,"ppm"
+	print "\t\t\t\t\t\t\t\t SG:  ",SG
         print "" 
         print "\t   LastFlood", LastFlood, "\t\tDispensed pH-/pH+\t", pHDn,"/",pHUp
-	print "\t   NextFlood", NextFlood, "\t\tDispensed GrowA/GrowB\t0.00 / 0.00"
+	print "\t   NextFlood", NextFlood, "\t\tDispensed GrowA/GrowB\t0.00 / 0.00" #, GrowA,"/",GrowB
 	print "\t\t\t\t\t\t\tDispensed FloA/FloB\t0.00 / 0.00"
         print ""
-        print "\t\tPump Bed1 Volume: ", VolBed1,"L"
-        print "\t\tPump Bed2 Volume: ", VolBed2,"L"
-	time.sleep(0.6)
+        print "\t\tPump Bed1 Volume: ", flow3,"L"
+        print "\t\tPump Bed2 Volume: ", flow4,"L"
 
 def HallWrite():
 	global flow3 
@@ -616,21 +608,16 @@ def HallWrite():
 		if Oflow3 > flow3:
 			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, flow4)
 		else:
-                       	data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4)
-#	else:
-#		data = (Date, Date, "0", HD2, h2, HD3, h3, HD4, h4, "0", flow4)
+                        data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4)
 	if Oflow4 != flow4:
 		if Oflow4 > flow4:
 			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, flow3, flow4)
 		else:
 			data = (Date, HD1,h1, HD2, h2, HD3, "0", Date, "1", flow3, flow4)
-#	else:
-#		data = (Date, HD1,h1,Date, "0", h3, HD4, h4, flow3, "0")
         try:
                 DV.execute(sql, data)
                 DV.close
                 Farm.commit()
-		Farm.close
         except:
                 pass
         Oflow3 = flow3 
@@ -649,8 +636,8 @@ def Light():
                 DayEnd = "18:00:00"
 	else:
 		mode = "Vegetative"
-                DayStart = "04:00:00"
-                DayEnd = "20:00:00"
+                DayStart = "06:00:00"
+                DayEnd = "22:00:00"
 
         if now > DayStart  and  now < DayEnd:
 		if not LStatus:
@@ -670,26 +657,27 @@ def Flood():
 	Date = now.strftime("%Y-%m-%d %H:%M:%S")
 	Shed=dbRead('Shed')
 	try:
-		date = Shed[0]
-		mode = Shed[1]
 		period = Shed[2]
 		LastFlood = Shed[3]
         	NextFlood = Shed[4]
 		SinceLast = now-LastFlood
 		SinceLastMin = SinceLast.seconds / 60
 	except:
-		mode = "Vegetative"
-		period =  "12"
+		period =  "24"
 		NextFlood = now
 		LastFlood = (now - DT.timedelta(days = 1))
 		SinceLast = now-LastFlood
 		SinceLastMin = "31"
 	if now >= NextFlood:
-		if not PStatus:
+		print LastFlood, NextFlood,"2", flow1, flow2
+		time.sleep(2)
+		if not PStatus  and flow1 == 0 and flow2 == 0:
 			Valve(0)
 			GPIO.output(26, GPIO.HIGH)
 		        GPIO.output(21, GPIO.HIGH)
 			DataWrite()
+		value = ""
+		Display()
 		if ValveD and flow2 > 0.075:
                         GPIO.output(21, GPIO.LOW)
                         HallWrite()
@@ -703,20 +691,18 @@ def Flood():
                                         passwd="a-51d41e",
                                         database="Farm"
                                 )
-                                SheD = Farm.cursor() 
-				sql = "INSERT INTO Farm.Shed (date, mode, period, LastFlood, NextFlood) VALUES (%s, %s, %s, %s,%s)"
-                                data = (now,mode,period,now,NextFlood)
+                                SheD = Farm.cursor(prepared=True)
+                                sql = """UPDATE Shed SET date = %s, NextFlood = %s where date = (select date from Shed order by date desc limit 1)"""
+                                data = (now,NextFlood)
                                 SheD.execute(sql,data)
                                 SheD.close
                                 Farm.commit()
-				Farm.close
-#				flow1 = 0
-#				flow2 = 0
-			else:
-				GPIO.output(21, GPIO.LOW)
+
 		elif flow1 > 0.12 and not ValveD:
+			#print flow1
 			GPIO.output(21, GPIO.LOW)
 			while flow1 < (flow3 / 6):
+				Display()
 				HallWrite()
 			Valve(1)
 			GPIO.output(21, GPIO.HIGH)
@@ -752,7 +738,6 @@ def Calibrate(pH,ECs):
         pHDn = pHDn[+3:-2]
         pHUp = Atlas(102,"D,?")
         pHUp = pHUp[+3:-2]
-
 #       GrowA = Atlas(103,"D,?")
 #       GrowA = GrowA[+3:-2]
 #       GrowB = Atlas(104,"D,?")     
@@ -761,10 +746,13 @@ def Calibrate(pH,ECs):
 #       FloA = FloA[+3:-2]
 #       FloB = Atlas(106,"D,?") 
 #       FloB = FloB[+3:-2]
+
 #	"select ((MAX(pH) - MIN(pH))/COUNT(pH) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 5 MINUTE);"
 #	"select (MAX(EC) - MIN(EC))/COUNT(EC) as ECVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 5 MINUTE);"
+	
 #	"select ((MAX(pH) - MIN(pH))/COUNT(pH) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 30 MINUTE);"
 #        "select (MAX(EC) - MIN(EC))/COUNT(EC) as ECVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 30 MINUTE);"
+
 #	"select (MAX(pH) - MIN(pH))/COUNT(pH) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 2 HOUR );"
 #        "select (MAX(EC) - MIN(EC))/COUNT(EC) as ECVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 2 HOUR );"
 
@@ -778,72 +766,73 @@ def Main():
 		option = "a"
 	thread = ReadSensors(pHECT)
 	thread2 = Write_Hall(HallReset)
-	Deamonstat = os.system('systemctl is-active  growbot')
-	if Deamonstat == 768 or Deamonstat == "inactive":
+	Deamonstat = os.system('service growbot status')
+	if Deamonstat == 768:
 		Deamonstat = "UserLand"
-		os.system('systemctl start growbot')
-	elif Deamonstat == 0 or Deamonstat == "active":
+	elif Deamonstat == 0:
 		Deamonstat = "Deamon"
-	else:
-		Deamonstat = Deamonstat
-	context=getpass.getuser()
 	while True:
-		if context == "root":
-			Sensor = ""
-	    		try:
-    				if thread.is_alive() is False:
-					threadStat = "not running"
-       		        		print "starting Chemical sensors task"
-        	        		thread = ReadSensors(pHECT) 
-					thread.setDaemon(True)
-					thread.start()
-				else:
-                        	        threadStat = "running"
+#		Shed=dbRead('Shed')
+#        	LastFlood = str(Shed[3])
+#	        NextFlood = str(Shed[4])
+		Sensor = ""
+    		try:
+    			if thread.is_alive() is False:
+				threadStat = "not running"
+       		        	print "starting Chemical sensors task"
+        	        	thread = ReadSensors(pHECT) 
+				thread.setDaemon(True)
+				thread.start()
+			else:
+                                threadStat = "running"
 
-	                        if thread2.is_alive() is False:
-        	                        threadStat2 = "not running"
-                	                print "Running Hall watcher task"
-                        	        thread2 = Write_Hall(HallReset) 
-                                	thread2.setDaemon(True)
-	                                thread2.start()
-        	                else:
-                	                threadStat2 = "running"
-                        	try:
-					GPIO.add_event_detect(DrainBed1, GPIO.BOTH, callback=countPulse)
-	                        except:
-        	                        pass
-                	        try:
-					GPIO.add_event_detect(DrainBed2, GPIO.BOTH, callback=countPulse)
-	                        except:	
-        	                        pass
-                	        try:
-					GPIO.add_event_detect(PumpBed1, GPIO.BOTH, callback=countPulse)
-	                        except:
-        	                        pass
-                	        try:
-					GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse)
-	                        except:
-        	                        pass
+                        if thread2.is_alive() is False:
+                                threadStat2 = "not running"
+                                print "Running Hall watcher task"
+                                thread2 = Write_Hall(HallReset) 
+                                thread2.setDaemon(False) #True)
+                                thread2.start()
+                        else:
+                                threadStat2 = "running"
+                        try:
+				GPIO.add_event_detect(DrainBed1, GPIO.FALLING, callback=countPulse)
+                        except:
+                                pass
+                        try:
+				GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
+                        except:
+                                pass
+                        try:
+				GPIO.add_event_detect(PumpBed1, GPIO.FALLING, callback=countPulse)
+                        except:
+                                pass
+                        try:
+				GPIO.add_event_detect(PumpBed2, GPIO.FALLING, callback=countPulse)
+                        except:
+                                pass
 
-				LStatus = GPIO.input(12)
-		        	PStatus = GPIO.input(21)
-				FStatus = GPIO.input(20)
-    				Light()
-				Flood()
-				HallWrite()
+			LStatus = GPIO.input(12)
+		        PStatus = GPIO.input(21)
+			FStatus = GPIO.input(20)
+    			Light()
+			Flood()
+			HallWrite()
+			if Deamonstat == "UserLand":
+				Display()
+			else:
 				try:
-					LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", str(LastFlood),"NextFlood", str(NextFlood),"flow3", flow3,"flow4", flow4,"pH", pH,"EC", EC,"S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
+					LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", LastFlood,"NextFlood", NextFlood,"flow3", flow3,"flow4", flow4,"pH", pH,"EC", EC,"S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
 					LogString=str(LogString)
 					syslog.syslog(syslog.LOG_INFO,LogString)
 				except NameError:
 					pass
-				time.sleep(0.9)
-	    		except KeyboardInterrupt:
-	        		print '\ncaught keyboard interrupt!, bye'
-        			GPIO.cleanup()
-        			sys.exit()
-	        if context == "pi":
-			Display()
+#				time.sleep(1)
+    		except KeyboardInterrupt:
+	
+        		print '\ncaught keyboard interrupt!, bye'
+        		GPIO.cleanup()
+        		sys.exit()
+
 if __name__=="__main__":
 
         Main()
