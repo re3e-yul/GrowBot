@@ -245,20 +245,11 @@ def pHECT():
 				Farm.commit()
 				Farm.close
 				DataWrite()
-#			Calibrate(pH,ECs)
-#
-def Calibrate(pH,ECs):
 		        global pHUp
         		global pHDn
         		global pHVar
-#			now = datetime.now()
-#	        	now = now.strftime("%Y-%m-%d %H:%M:%S")
-#        		ECs.split(',')
-#	        	Ec,TDS,S,SG = ECs.split(',')
-#        		EC = float (float(Ec) /1.0)
-#	        	TDS = float (float(TDS) / 1.0)
-#        		S = float (float(S) * 1000)
-#	        	SG = float (float(SG) / 1.0)
+			now = datetime.now()
+	        	now = now.strftime("%Y-%m-%d %H:%M:%S")
         		pHUp = Atlas(102,"D,?")
 	        	pHUp = pHUp[+3:-2]
 	        	pHDn = Atlas(101,"D,?")
@@ -275,7 +266,7 @@ def Calibrate(pH,ECs):
 			cursor.execute("select AVG(pH) from H2O where date >= DATE_SUB(NOW(),INTERVAL 30 MINUTE)")
 			myresult = cursor.fetchone()
 			try:
-        			pHVar = round((myresult[0] - 5.5),3)
+        			pHVar = round((myresult[0] - 5.5),2)
 			except:
        			        pHVar = '0'
 	        	cursor.execute("select AVG(EC) from H2O where date >= DATE_SUB(NOW(),INTERVAL 30 MINUTE)")
@@ -289,6 +280,21 @@ def Calibrate(pH,ECs):
 			cursor.execute(sql, data)
 			cursor.close
 			Farm.commit()
+			cursor = Farm.cursor()
+                        cursor.execute("select avg(pH) from H2O where date >= DATE_SUB(NOW(),INTERVAL 1 MINUTE)")
+			OneMinpHAVG=cursor.fetchone()
+			cursor = Farm.cursor()
+                       	cursor.execute("select avg(pHDelta) from Cal where date >= DATE_SUB(NOW(),INTERVAL 60 SECOND)")
+			pHDeltaone = cursor.fetchone()
+			cursor.execute("select avg(pHDelta) from Cal where date >= DATE_SUB(NOW(),INTERVAL 600 SECOND)")
+                        pHDeltaten = cursor.fetchone()
+			avgRatio = round((pHDeltaten / pHDeltaone),2)
+			if OneMinpHAVG < 5.2:
+					if  avgRatio = 0:
+						Atlas(101,"D,5")
+					elif avgRatio > 0.1
+						Atlas(101,"D,15")
+			elif OneMinpHAVG > 5.8:
 			Farm.close
 
 def truncate(n, decimals=0):
@@ -323,10 +329,10 @@ def countPulse(channel):
 		        PulseDrain2 = PulseDrain2 + 1
 			PulsePump2 = PulsePump2 - 1.2
 			VolDrain2 = round(PulseDrain2 / (60 * 28.19),3)
-	if (channel == PumpBed1):
+	if PStatus and (channel == PumpBed1):
 			Sensor = "Pump 1"
 		        PulsePump1 = PulsePump1 + 1.5
-        if (channel == PumpBed2):
+        if PStatus and (channel == PumpBed2):
 			Sensor = "Pump 2"
 		        PulsePump2 = PulsePump2 + 1
 	VoluBed1 = round((PulsePump1 / (60 * 28.19)),3)
@@ -348,7 +354,7 @@ def Valve(dir):
                         t_end = time.time() + 13
                         while time.time() < t_end:
 				HallWrite()
-	        		Display()
+	        		#Display()
         	        GPIO.output(5, GPIO.HIGH)
                 if not ValveD:
                         GPIO.output(5, GPIO.LOW)
@@ -356,7 +362,7 @@ def Valve(dir):
                         t_end = time.time() + 13
                         while time.time() < t_end:
 				HallWrite()
-				Display()
+				#Display()
                         GPIO.output(5, GPIO.HIGH)
 
 def dbRead(table):
@@ -501,6 +507,8 @@ def DataWrite():
 
 def Display():
 	global Sensor
+	global VoluBed1
+        global VoluBed2
 	now = datetime.now()
         T = now.strftime("%d-%m-%Y %H:%M:%S")
 	LStatus = GPIO.input(12)
@@ -559,9 +567,8 @@ def Display():
         print "\t\tLastFlood", LastFlood, "\t\t Dispensed GrowA/GrowB: 0.00 / 0.00"
 	print "\t\tNextFlood", NextFlood, "\t\t   Dispensed FloA/FloB: 0.00 / 0.00"
         print ""
-        print "\t\tPump Bed1 VoluBed1,: ", VoluBed1,"L"
-
-        print "\t\tPump Bed2 VoluBed2,: ", VoluBed2,"L"
+        print "\t\tPump Bed1 VoluBed1,: ", VolBed1,"L"
+        print "\t\tPump Bed2 VoluBed2,: ", VolBed2,"L"
 	time.sleep(0.6)
 
 def HallWrite():
@@ -601,10 +608,13 @@ def HallWrite():
                         Sensor = " "
         except:
                 Sensor = " "
+	time.sleep(0.5)
 	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
-	if VoluBed1 == OVoluBed1:
+	if VoluBed1 > 0 and VoluBed1 == OVoluBed1:
 		OVoluBed1 = 0
-                VoluBed1 = 0
+                del VoluBed1
+#		global VoluBed1
+		VoluBed1 = 0
 #		print "No Sensor 1=",VoluBed1, OVoluBed1
 		data = (now, now, "0", HD2, h2, now, "0", HD4, h4 ,"0", VoluBed2)
 		Sensor = " "
@@ -637,8 +647,10 @@ def HallWrite():
         OVoluBed2 = VD[10]
 	now = datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
-	if VoluBed2 == OVoluBed2:
+	if VoluBed2 > 0 and VoluBed2 == OVoluBed2:
 		OVoluBed2 = 0
+		del VoluBed2
+#		global VoluBed2
                 VoluBed2 = 0
 #		print "No Sensor 2=",VoluBed2, OVoluBed2
 		data = (now, HD1, h1, now, "0", HD3, h3, now, "0", VoluBed1, "0")              #RESET drain 2 and bedvol2
@@ -672,7 +684,7 @@ def Light():
         now = now.strftime("%H:%M:%S")
 	LStatus = GPIO.input(12)
         if mode == "Flowering":
-                DayStart = "09:00:00"
+                DayStart = "08:00:00"
                 DayEnd = "17:00:00"
 	else:
 		mode = "Vegetative"
@@ -721,8 +733,13 @@ def Flood():
 #				Valve(0)
 			DataWrite()
 		while Sensor != "Drain 1": #VolDrain1 < (VoluBed1 / 20):
+				if Sensor == "Pump 2":
+                                	GPIO.output(21, GPIO.LOW)
+					Valve(0)
+				GPIO.output(21, GPIO.HIGH)
                                 HallWrite()
-				Display()
+				
+				#Display()
                                 #time.sleep(1)
 
 		Valve(1)
@@ -731,7 +748,7 @@ def Flood():
 		while Sensor != "Drain 2": #VolDrain2 < (VoluBed2 / 10):
 				GPIO.output(21, GPIO.HIGH)
                                 HallWrite()
-                                Display()
+                                #Display()
 		if SinceLastMin > 10:
 	        	DataWrite()
 	                now = datetime.now()
@@ -751,6 +768,23 @@ def Flood():
 			Farm.close
 	GPIO.output(21, GPIO.LOW)
 	return LastFlood, NextFlood
+
+
+def SysLog(Deamonstat):
+
+	LStatus = GPIO.input(12)
+        PStatus = GPIO.input(21)
+        FStatus = GPIO.input(20)
+        try:
+        	LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", str(LastFlood),"NextFlood", str(NextFlood),"VoluBed1", VoluBed1,"VoluBed2", VoluBed2,"pH", pH, pHVar, "EC", EC, ECVar, "S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
+                LogString=str(LogString)
+                syslog.syslog(syslog.LOG_INFO,LogString)
+        except NameError:
+                LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", str(LastFlood),"NextFlood", str(NextFlood),"VoluBed1", VoluBed1,"VoluBed2", VoluBed2,"pH", pH, pHVar, "EC", EC, ECVar, "S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
+                LogString=str(LogString)
+                syslog.syslog(syslog.LOG_INFO,LogString)
+        time.sleep(0.9)
+
 
 def Main():
 	global action
@@ -797,20 +831,12 @@ def Main():
 	                        except:
         	                        pass
 
-				LStatus = GPIO.input(12)
-		        	PStatus = GPIO.input(21)
-				FStatus = GPIO.input(20)
-    				#Light()
+    				Light()
 				Flood()
 				HallWrite()
-				Display()
-#				try:
-				LogString="Deamonstat",Deamonstat,"Lstatus", LStatus,"Pstatus", PStatus,"FStatus", FStatus,"temp", temp,"LastFlood", str(LastFlood),"NextFlood", str(NextFlood),"VoluBed1", VoluBed1,"VoluBed2", VoluBed2,"pH", pH, pHVar, "EC", EC, ECVar, "S", S,"SG", SG,"pHDn", pHDn,"pHUp", pHUp,"GrowA", GrowA,"GrowB", GrowB,"FloA", FloA,"FloB", FloB
-				LogString=str(LogString)
-				syslog.syslog(syslog.LOG_INFO,LogString)
-#				except NameError:
-#					pass
-				time.sleep(0.9)
+				SysLog(Deamonstat)
+#				Display()
+
 	    		except KeyboardInterrupt:
 	        		print '\ncaught keyboard interrupt!, bye'
         			GPIO.cleanup()
