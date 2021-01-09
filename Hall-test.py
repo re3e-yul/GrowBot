@@ -7,10 +7,10 @@ import math
 Pump = 21
 Valve = 5
 VDir = 6
-DrainBed1 = 22
-DrainBed2 = 18
+DrainBed1 = 25
+DrainBed2 = 22
 PumpBed1 = 24
-PumpBed2 = 25
+PumpBed2 = 23
 Pump = 21
 #GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -19,6 +19,7 @@ GPIO.setup(DrainBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed1, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(PumpBed2, GPIO.IN, pull_up_down = GPIO.PUD_UP)
 GPIO.setup(Pump, GPIO.IN)
+GPIO.setup(VDir, GPIO.IN)
 global option
 global T
 global count1
@@ -62,6 +63,7 @@ def countPulse(channel):
         global flow3
         global flow4
 	global Sensor
+	VDir = GPIO.input(6)
 #	now = datetime.now()
 #	T = now.strftime("%H:%M:%S")
 	if (channel == DrainBed1):
@@ -76,11 +78,11 @@ def countPulse(channel):
 			count4 = count4 - 1
 			flow2 = round(count2 / (60 * 28.3906),3)
 			flow2b = round(count4 / (60 * 28.3906),3)
-	if (channel == PumpBed1):
+	if (channel == PumpBed1) and VDir == 0 and PStatus == 1 :
 			Sensor = "Pump 1"
 		        count3 = count3 + 1
 			flow3 = round(count3 / (60 * 28.3906),3)
-        if (channel == PumpBed2):
+        if (channel == PumpBed2) and VDir == 1 and PStatus == 1:
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
 			flow4 = round(count4 / (60 * 28.3906),3)

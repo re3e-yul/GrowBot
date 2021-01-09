@@ -46,8 +46,8 @@ else
 fi
 if [ $Dir -eq "0" ]
 then 
-        Dir="feed"
+        Dir="Bed 0"
 else 
-        Dir="cycle"
+        Dir="Bed 1"
 fi
 echo "Power(5): "$Master "  Dir(6):" $Dir
