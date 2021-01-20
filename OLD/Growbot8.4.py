@@ -86,8 +86,6 @@ def truncate(n, decimals=0):
     return int(n * multiplier) / multiplier
 
 def countPulse(channel):
-#	global T
-#	T = 0
 	global count1
 	global count2
 	global count3
@@ -103,8 +101,6 @@ def countPulse(channel):
 	global Sensor
 	VDir = GPIO.input(6)
 	PStatus = GPIO.input(21)
-#	now = datetime.now()
-#	T = now.strftime("%H:%M:%S")
 	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			count1 = count1 + 1
@@ -124,7 +120,7 @@ def countPulse(channel):
         if (channel == PumpBed2) and VDir == 1 and PStatus == 1:
 			Sensor = "Pump 2"
 		        count4 = count4 + 1
-			flow4 = round(count4 / (60 * 14.3906),3)
+			flow4 = round(count4 / (60 * 22.3906),3)
 	if flow3 <= 0:
 		flow3 = 0
 	if flow4 <= 0:
@@ -183,7 +179,7 @@ def pHECT():
                         SinceLastSec = SinceLast.seconds
                         if SinceLastSec > 5:
 			        Farm = mysql.connector.connect(
-                                        host="localhost",
+                                        host="192.168.1.13",
                                         user="pi",
                                         passwd="a-51d41e",
                                         database="Farm"
@@ -221,11 +217,11 @@ def Display():
         TDS = H2O[4]
         S = H2O[5]
         SG = H2O[6]     
-        Cal=dbRead('Cal')
-        pHVar = Cal[1]
-        ECVar = Cal[2]
-        pHUp = [4]
-        pHDn = [6]
+#        Cal=dbRead('Cal')
+#        pHVar = Cal[1]
+#        ECVar = Cal[2]
+#        pHUp = [4]
+#        pHDn = [6]
         Vol=dbRead('VolDrain')
         VolBed1 = Vol[9]
         VolBed2 = Vol[10]
@@ -249,11 +245,11 @@ def Display():
                 if not Sensor:
                         Sensor = " "
         except:
-                Sensor = " "
+               Sensor = " "
         os.system('clear')
         print T, Sensor
         print ""
-        print "Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tpH: ", pH, "var:",pHVar,  "\t\t    EC:",EC,"ppm, var:",ECVar
+	print "Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tpH: ", pH,  "\t\t    EC:",EC,"ppm"
         print "Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t\t\t   TDS:", TDS,"ppm"
         print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t     S:", S,"ppm"
         print "\t\t\t\t\t\t\t\t\t    SG:",SG
@@ -264,29 +260,8 @@ def Display():
         print ""
         print "\t\tPump Bed1 VBed1,: ", VolBed1,"L"
         print "\t\tPump Bed2 VBed2,: ", VolBed2,"L"
-        time.sleep(0.6)
+        #time.sleep(0.6)
 
-
-#def Display():
-#	value = ""
-#	now = datetime.now()
-#	T = now.strftime("%H:%M:%S")
-#	Sensor = ""
-#	os.system('clear')
-#	PStatus = GPIO.input(21)	
-#	print T , Sensor
-#	print ""
-#	if PStatus:
-#		PStatus == "On"
-#	else:
-#		PStatus == "Off"
-#	print "Pump: ", PStatus
-#	print "Pump Bed1 Volume: ", flow3,"L"
-#	print "Drain Bed1 Volume: ", flow1,"L"
-#	print ""
-#	print "Pump Bed2 Volume: ", flow4,"L"
-#	print "Drain Bed2 Volume: ", flow2,"L"
-#	time.sleep(0.3)
 
 def Valve(dir):
         now = datetime.now()
@@ -332,7 +307,7 @@ def HallSensor():
         OVBed1 = VD[9]
         OVBed2 = VD[10]
 	Farm = mysql.connector.connect(
-                host="localhost",
+                host="192.168.1.13",
                 user="pi",
                 passwd="a-51d41e",
                 database="Farm"
@@ -341,44 +316,40 @@ def HallSensor():
 	now = datetime.now()
         now = now.strftime("%Y-%m-%d %H:%M:%S")
 	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
+	Display()
+#	print "Bed1 : Oflow3:",Oflow3, " ,flow3:",flow3
+#	print "Bed2 : Oflow4:",Oflow4, " ,flow4:",flow4
         if Oflow3 == flow3:
-#		print "nothin pod1"
-		data = (now, now, "0", HD2, h2, now, "0", HD4, h4 ,flow3, flow4)
-		Display()
-        else:
-                if Oflow3 < flow3:
-#			print "filling pod1"
-			data = (now, HD1,h1, HD2, h2, now, "1",HD4 , "0", flow3, flow4) #FILL bed 1
-			Display()
-                else:
-#			print "draining pod1"
-			data = (now, now, "1", HD2, h2, HD3, "0",HD4, h4, flow3, flow4)   #DRAIN bed1
-			Display()
+ #     	        print "nothin pod1"
+               	data = (now, HD1, h1, now, "0", HD3, h3, now, "0", flow3, flow4)
+       	else:
+               	if Oflow3 < flow3:
+ #                     	print "filling pod1"
+                       	data = (now, HD1,h1, HD2, h2, HD3, "1", now, "0", flow3, flow4) #FILL bed 1
+               	else:
+ #                      	print "draining pod1"
+                       	data = (now, now,"1",HD2, h2, HD3, "0", HD4, h4, flow3, flow4)  #DRAIN bed1
+	
         if Oflow4 == flow4:
 #		print "nothin pod2"
 		data = (now, HD1, h1, now, "0", HD3, h3, now, "0", flow3, flow4)
-		Display()
         else:
-                if Oflow4 < flow4:
+       	        if Oflow4 < flow4:
 #			print "filling pod2"
 			data = (now, HD1,h1, HD2, h2, HD3, "0", now, "1", flow3, flow4) #FILL bed 2
-			Display()
-   		else:
+	   	else:
 #			print "draining pod2"
 			data = (now, HD1,h1,now, "1", HD3, h3, HD4, "0", flow3, flow4)  #DRAIN bed2
-			Display()
-
 	try:
-                DV.execute(sql, data)
-        except:
-                pass
+	        DV.execute(sql, data)
+	except:
+		pass
         DV.close
         Farm.commit()
         Farm.close
-
 	Oflow3 = flow3
 	Oflow4 = flow4
-	time.sleep(1)
+#	time.sleep(1.5)
 
 def Light():
         Shed=dbRead('Shed')
@@ -424,20 +395,19 @@ def Flood():
         NextFlood = Shed[4]
 	SinceLast = now-LastFlood
 #	print NextFlood
-	time.sleep(1)
 	if now >= NextFlood:
 		Valve(0)
 		while Sensor!= "Drain 1":
 #		while flow1 < (flow3 / 10 ):
 			Display()
-			HallSensor()
+#			HallSensor()
 			DataWrite()
 			GPIO.output(26, GPIO.HIGH)
 			GPIO.output(21, GPIO.HIGH)
 		timeout = time.time() + 5
 		while True:
 			Display()
-			HallSensor()
+#			HallSensor()
 			DataWrite()
     			test = 0
     			if test == 5 or time.time() > timeout:
@@ -447,14 +417,14 @@ def Flood():
                 while Sensor!= "Drain 2":
 #		while flow2 < (flow4 / 10 ):
 			Display()
-			HallSensor()
+#			HallSensor()
 			DataWrite()
 			GPIO.output(26, GPIO.HIGH)
                         GPIO.output(21, GPIO.HIGH)
 		timeout = time.time() + 5
 		while True:
 			Display()
-			HallSensor()
+#			HallSensor()
 			DataWrite()
                         test = 0
                         if test == 5 or time.time() > timeout:
@@ -464,7 +434,7 @@ def Flood():
 		now = datetime.now()
                 NextFlood = now + DT.timedelta(hours = int(period))
                 Farm = mysql.connector.connect(
-                	host="localhost",
+                	host="192.168.1.13",
                         user="pi",
                         passwd="a-51d41e",
                         database="Farm"
@@ -506,7 +476,7 @@ def DataWrite():
                 SinceLastSec = SinceLast.seconds
                 if main != Lmain or Lights != Llight or APump != LAPump or ExFan !=LExFan or WPump != LWPump or ValveS != LValveS or ValveD != LValveD:
                         Farm = mysql.connector.connect(
-                                        host="localhost",
+                                        host="192.168.1.13",
                                         user="pi",
                                         passwd="a-51d41e",
                                         database="Farm"
@@ -524,7 +494,7 @@ def DataWrite():
 
 def dbRead(table):
 		Farm = mysql.connector.connect(
-                                host="localhost",
+                                host="192.168.1.13",
                                 user="pi",
                                 passwd="a-51d41e",
                                 database="Farm"
@@ -738,19 +708,19 @@ def Main():
                                         threadStat = "running"
 
 				try:
-					GPIO.add_event_detect(DrainBed1, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(DrainBed1, GPIO.RISING, callback=countPulse)
 				except:
 					pass
 				try:
-					GPIO.add_event_detect(DrainBed2, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse)
 				except:
                                         pass
 				try:
-					GPIO.add_event_detect(PumpBed1, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(PumpBed1, GPIO.RISING, callback=countPulse)
                                 except:
                                         pass
 				try:
-					GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse)
+					GPIO.add_event_detect(PumpBed2, GPIO.RISING, callback=countPulse)
                                 except:
                                         pass
 #				Display()
@@ -764,7 +734,7 @@ def Main():
         	                GPIO.cleanup()
                 	        sys.exit()
 		
-		elif context != "root":
+		elif context == "pi":
 			try:
 	                        Display()
 			except KeyboardInterrupt:
