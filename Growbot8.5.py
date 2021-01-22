@@ -98,7 +98,8 @@ def Main():
 		Light()
 		Flood()
 		Display()
-
+		HallReset()
+		
 class ReadSensors(threading.Thread):
         def __init__(self, Read_Chem_Sensors):
                 threading.Thread.__init__(self)
@@ -132,24 +133,28 @@ def countPulse(channel):
 	if (channel == DrainBed1):
 			Sensor = "Drain 1"
 			count1 = count1 + 0.7
-			#count3 = count3 - 1
+			count3 = count3 - 1
 			flow1 = round( count1 ,3)
-			flow1 = round((count1 / 100),3)
-			flow3 = round((count3 / 100),3)
+			flow1 = round((count1 / 10),3)
+			flow3 = round((count3 / 10),3)
 	if (channel == DrainBed2):
 			Sensor = "Drain 2"
 		        count2 = count2 + 0.4
-			#count4 = count4 - 1
-			flow2 = round(count2 / 100,3)
-			flow4 = round(count4 / 100,3)
+			count4 = count4 - 1
+			flow2 = round(count2 / 10,3)
+			flow4 = round(count4 / 10,3)
 	if (channel == PumpBed1) and VDir == 0 and PStatus == 1 :
 			Sensor = "Pump 1"
 		        count3 = count3 + 0.5
-			flow3 = round(count3 / 100,3)
+			flow3 = round(count3 / 10,3)
         if (channel == PumpBed2) and VDir == 1 and PStatus == 1:
 			Sensor = "Pump 2"
 		        count4 = count4 + 0.3
-			flow4 = round(count4 / 100,3)
+			flow4 = round(count4 / 10,3)
+	if flow3 <= 0:
+		flow3 = 0
+	if flow4 <=0:
+		flow4 = 0
 
 	VD=dbRead('VolDrain')
         date = VD[0]
@@ -179,14 +184,14 @@ def countPulse(channel):
 	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
 	if Oflow3 != flow3:
 		if Oflow3 > flow3:
-			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, flow4)
+			data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, flow4)  #Draining bed1
 		else:
-                        data = (Date, HD1,h1, HD2, h2, Date, "1", HD4, "0", flow3, flow4)
+                        data = (Date, HD1,"0", HD2, h2, Date, "1", HD4, "0", flow3, flow4)  #Filling bed 1
 	if Oflow4 != flow4:
 		if Oflow4 > flow4:
-			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, flow3, flow4)
+			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, h4, flow3, flow4)    # draining bed 2
 		else:
-			data = (Date, HD1,h1, HD2, h2, HD3, "0", Date, "1", flow3, flow4)
+			data = (Date, HD1,h1, HD2, "0", HD3, "0", Date, "1", flow3, flow4)  # filling bed 2 
         try:
                 DV.execute(sql, data)
                 DV.close
@@ -195,6 +200,40 @@ def countPulse(channel):
                 pass
         Oflow3 = flow3 
         Oflow4 = flow4
+
+def HallReset():
+	VD=dbRead('VolDrain')
+        date = VD[0]
+        HD1 = VD[1]
+        h1 = VD[2]
+        HD2 = VD[3]
+        h2 = VD[4]
+        HD3 = VD[5]
+        h3 = VD[6]
+        HD4 = VD[7]
+        h4 = VD[8]
+        VolBed1 = VD[9]
+        VolBed2 = VD[10]
+	now = datetime.now()
+	SinceLast = (now - date)
+	SinceLastMin = SinceLast.seconds / 60
+	if SinceLastMin > 20:
+		try:
+       		        Farm = mysql.connector.connect(
+                	        host="192.168.1.13",
+                        	user="pi",
+	                        passwd="a-51d41e",
+        	                database="Farm"
+                	)
+
+			DV = Farm.cursor()
+			sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
+			data = (now, HD1, "0", HD2, "0", HD3, "0", HD4, "0", "0", "0")
+	                DV.execute(sql, data)
+	       	        DV.close
+	       	        Farm.commit()
+        	except:
+	       	        pass
 
 
 def Light():
@@ -218,11 +257,11 @@ def Light():
                 if not LStatus:
                         GPIO.output(26, GPIO.HIGH)
                         GPIO.output(12, GPIO.HIGH)
-                       
+        		DataWrite()               
         else:
                 if LStatus:
                         GPIO.output(12, GPIO.LOW)
-                       
+        		DataWrite()               
 
 
 def Flood():
@@ -275,6 +314,7 @@ def Flood():
 		Valve(0)
 	else:
 		GPIO.output(21, GPIO.LOW)
+	DataWrite()
 	flow1 == 0
 	flow2 == 0
 	flow3 == 0
@@ -294,6 +334,7 @@ def Valve(dir):
  #                               HallSensor()
                                 Display()
                         GPIO.output(5, GPIO.HIGH)
+                        DataWrite()
                 if not ValveD:
                         GPIO.output(5, GPIO.LOW)
                         GPIO.output(6, GPIO.HIGH)
@@ -302,7 +343,8 @@ def Valve(dir):
 #                                HallSensor()
                                 Display()
                         GPIO.output(5, GPIO.HIGH)
-
+			DataWrite()
+			
 def Display():
         global Sensor
         global VBed1
@@ -354,7 +396,7 @@ def Display():
         os.system('clear')
         print T, Sensor
         print ""
-	print "Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tpH: ", pH,  "\t\t    EC:",EC,"ppm"
+	print "Lights:\t",Lstatus, "\t\tTemp: ", ('%2.3f'%temp),"c\t\tpH: ", pH,  "\t\t    EC:",EC,"ppm"
         print "Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t\t\t   TDS:", TDS,"ppm"
         print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t     S:", S,"ppm"
         print "\t\t\t\t\t\t\t\t\t    SG:",SG
@@ -363,111 +405,158 @@ def Display():
         print "\t\tLastFlood", LastFlood #, "\t\t Dispensed GrowA/GrowB: 0.00 / 0.00"
         print "\t\tNextFlood", NextFlood #, "\t\t   Dispensed FloA/FloB: 0.00 / 0.00"
         print ""
-        print "\t\tPump Bed1 VBed1,: ", flow1,"L / ",flow3,"L" #, VolBed1,"L"
-        print "\t\tPump Bed2 VBed2,: ", flow2,"L / ",flow4,"L" #, VolBed2,"L"
+        print "\t\tBed 1,: ", flow3,"L" #, VolBed1,"L"
+        print "\t\tBed 2,: ", flow4,"L" #, VolBed2,"L"
                 
 
 
 def dbRead(table):
-		Farm = mysql.connector.connect(
-                                host="192.168.1.13",
-                                user="pi",
-                                passwd="a-51d41e",
-                                database="Farm"
-                )
-                cursor = Farm.cursor()
-                if table == "H2O":
-                        cursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
-                        myresult = cursor.fetchone()
-                        cursor.close
+		try:
+			Farm = mysql.connector.connect(
+        	                        host="192.168.1.13",
+                	                user="pi",
+                        	        passwd="a-51d41e",
+                                	database="Farm"
+	                )
+        	        cursor = Farm.cursor()
+                	if table == "H2O":
+                        	cursor.execute("select * from Farm.H2O ORDER BY date DESC LIMIT 1")
+                       	 	myresult = cursor.fetchone()
+                        	cursor.close
+				Farm.close
+                        	try:
+                                	date = myresult[0]
+                                	Temp = myresult[1]
+                                	pH = myresult[2]
+                                	EC = myresult[3]
+                                	TDS = myresult[4]
+                                	S = myresult[5]
+                                	SG = myresult[6]
+                                	return date, Temp, pH, EC, TDS, S, SG
+                        	except TypeError:
+                                	pass
+                	if table == "Shed":
+                        	cursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
+                        	myresult = cursor.fetchone()
+                        	cursor.close
+				Farm.close
+                        	try:
+                                	date = myresult[0]
+                                	mode = myresult[1]
+                                	period = myresult[2]
+                                	LastFlood = myresult[3]
+                                	NextFlood = myresult[4]
+                                	return date, mode, period, LastFlood, NextFlood
+                        	except TypeError:
+                                	pass
+                	if table == "Data":
+                        	cursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
+                        	myresult = cursor.fetchone()
+                        	cursor.close
+				Farm.close
+                        	try:
+                        	        date = myresult[0]
+                                	main = myresult[1]
+                                	lights = myresult[2]
+                                	ExFan = myresult[3]
+                                	AirPump = myresult[4]
+                                	WaterPump = myresult[5]
+                                	ValveS = myresult[6]
+                                	ValveD = myresult[7]
+                                	return date, main, lights, ExFan, AirPump, WaterPump, ValveS, ValveD
+                        	except TypeError:
+                                	pass
+                	if table == "VolDrain":
+                        	cursor.execute("select * from Farm.VolDrain ORDER BY date DESC LIMIT 1")
+                        	myresult = cursor.fetchone()
+                        	cursor.close
+				Farm.close
+                        	try:
+                                	date = myresult[0]
+                                	HD1 = myresult[1]
+                                	Hall1 = myresult[2]
+                                	HD2 = myresult[3]
+                                	Hall2 = myresult[4]
+                                	HD3 = myresult[5]
+                                	Hall3 = myresult[6]
+                                	HD4 = myresult[7]
+                                	Hall4 = myresult[8]
+                                	VolBed1 = myresult[9]
+                                	VolBed2 = myresult[10]
+                                	return date,HD1,Hall1,HD2,Hall2,HD3,Hall3,HD4,Hall4,VolBed1,VolBed2
+                        	except TypeError:
+                                	pass
+			if table == "Cal":
+				cursor.execute("select * from Farm.Cal ORDER BY date DESC LIMIT 1")
+                        	myresult = cursor.fetchone()
+                        	cursor.close  
+                        	Farm.close
+                        	try:
+                                	date = myresult[0]
+					pHDelta = myresult[1]
+					ECDelta = myresult[2]
+					DpHp = myresult[3]
+					VpHp = myresult[4]
+					DpHm = myresult[5]
+					VpHm = myresult[6]
+					DFloA = myresult[7]
+					VFloA = myresult[8]
+					DFloB = myresult[9]
+					VFloB = myresult[10]
+					DVegA = myresult[11]
+					VVegA = myresult[12]
+					DVegB = myresult[13]
+					VVegB = myresult[14]
+					return date,pHDelta,ECDelta,DpHp,VpHp,DpHm,VpHm,DFloA,VFloA,DFloB,VFloB,DVegA,VVegA,DVegB,VVegB
+				except TypeError:
+                                	pass
 			Farm.close
-                        try:
-                                date = myresult[0]
-                                Temp = myresult[1]
-                                pH = myresult[2]
-                                EC = myresult[3]
-                                TDS = myresult[4]
-                                S = myresult[5]
-                                SG = myresult[6]
-                                return date, Temp, pH, EC, TDS, S, SG
-                        except TypeError:
-                                pass
-                if table == "Shed":
-                        cursor.execute("select * from Farm.Shed ORDER BY date DESC LIMIT 1")
-                        myresult = cursor.fetchone()
-                        cursor.close
-			Farm.close
-                        try:
-                                date = myresult[0]
-                                mode = myresult[1]
-                                period = myresult[2]
-                                LastFlood = myresult[3]
-                                NextFlood = myresult[4]
-                                return date, mode, period, LastFlood, NextFlood
-                        except TypeError:
-                                pass
-                if table == "Data":
-                        cursor.execute("select * from Farm.farmdata ORDER BY date DESC LIMIT 1")
-                        myresult = cursor.fetchone()
-                        cursor.close
-			Farm.close
-                        try:
-                                date = myresult[0]
-                                main = myresult[1]
-                                lights = myresult[2]
-                                ExFan = myresult[3]
-                                AirPump = myresult[4]
-                                WaterPump = myresult[5]
-                                ValveS = myresult[6]
-                                ValveD = myresult[7]
-                                return date, main, lights, ExFan, AirPump, WaterPump, ValveS, ValveD
-                        except TypeError:
-                                pass
-                if table == "VolDrain":
-                        cursor.execute("select * from Farm.VolDrain ORDER BY date DESC LIMIT 1")
-                        myresult = cursor.fetchone()
-                        cursor.close
-			Farm.close
-                        try:
-                                date = myresult[0]
-                                HD1 = myresult[1]
-                                Hall1 = myresult[2]
-                                HD2 = myresult[3]
-                                Hall2 = myresult[4]
-                                HD3 = myresult[5]
-                                Hall3 = myresult[6]
-                                HD4 = myresult[7]
-                                Hall4 = myresult[8]
-                                VolBed1 = myresult[9]
-                                VolBed2 = myresult[10]
-                                return date,HD1,Hall1,HD2,Hall2,HD3,Hall3,HD4,Hall4,VolBed1,VolBed2
-                        except TypeError:
-                                pass
-		if table == "Cal":
-			cursor.execute("select * from Farm.Cal ORDER BY date DESC LIMIT 1")
-                        myresult = cursor.fetchone()
-                        cursor.close  
-                        Farm.close
-                        try:
-                                date = myresult[0]
-				pHDelta = myresult[1]
-				ECDelta = myresult[2]
-				DpHp = myresult[3]
-				VpHp = myresult[4]
-				DpHm = myresult[5]
-				VpHm = myresult[6]
-				DFloA = myresult[7]
-				VFloA = myresult[8]
-				DFloB = myresult[9]
-				VFloB = myresult[10]
-				DVegA = myresult[11]
-				VVegA = myresult[12]
-				DVegB = myresult[13]
-				VVegB = myresult[14]
-				return date,pHDelta,ECDelta,DpHp,VpHp,DpHm,VpHm,DFloA,VFloA,DFloB,VFloB,DVegA,VVegA,DVegB,VVegB
-			except TypeError:
-                                pass
-		Farm.close
+		except:
+			pass
+def DataWrite():
+		date = datetime.now()
+		Date = date.strftime("%Y-%m-%d %H:%M:%S")
+		now = date.strftime("%H:%M:%S")
+		main = GPIO.input(26)
+		Lights = GPIO.input(12)
+		APump = GPIO.input(16)
+		ExFan = GPIO.input(20)
+		WPump = GPIO.input(21)
+		ValveS = GPIO.input(5)
+		ValveD = GPIO.input(6)
+
+		Act=dbRead('Data')
+		LDate = Act[0]
+		Lmain = Act[1]
+		Llight = Act[2]
+		LExFan = Act[3]
+		LAPump = Act[4]
+		LWPump = Act[5]
+		LValveS = Act[6]
+		LValveD = Act[7]
+
+		SinceLast = date-LDate
+	        SinceLastSec = SinceLast.seconds
+		if main != Lmain or Lights != Llight or APump != LAPump or ExFan !=LExFan or WPump != LWPump or ValveS != LValveS or ValveD != LValveD:
+			Farm = mysql.connector.connect(
+					host="localhost",
+					user="pi",
+					passwd="a-51d41e",
+					database="Farm"
+			)
+	
+			SheD = Farm.cursor()
+			# select * from farmdata order by date desc limit 1;
+			# +---------------------+------+--------+-------+---------+-----------+------+------+
+			# | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
+			# +---------------------+------+--------+-------+---------+-----------+------+------+
+			# | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
+			# +---------------------+------+--------+-------+---------+-----------+------+------+
+			sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+			val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD)
+			SheD.execute(sql, val)
+			SheD.close
+			Farm.commit()
 
 def pHECT():
         global temp
