@@ -80,9 +80,7 @@ def Main():
 		Deamonstat = Deamonstat
 	context=getpass.getuser()
 	while True:
-		if context == "pi":
-                        Display()
-		elif context == "root":
+		if context == "root":
 			if thread.is_alive() is False:
         	                threadStat = "not running"
                 	        print "starting Chemical sensors task"
@@ -107,12 +105,13 @@ def Main():
 				GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse)	
 			except:
 				pass
+#			Display()
 			Light()
 			Flood()
-#			Display()
 			HallReset()
-
-
+	if context == "pi":
+			Display()
+		
 class ReadSensors(threading.Thread):
         def __init__(self, Read_Chem_Sensors):
                 threading.Thread.__init__(self)
@@ -184,19 +183,20 @@ def countPulse(channel):
 			Sensor = "Drain 2"
 		        count2 = count2 + 0.4
 			count4 = count4 - 0.3
-			flow2 = round(count2 / 10,4)
-			flow4 = round(count4 / 10,4)
+			flow2 = round(count2 / 10 , 4)
+			flow4 = round(count4 / 10 , 4)
 			data = (Date, HD1,h1,Date, "1", HD3, h3, HD4, "0", VolBed1, flow4)    # draining bed 2
-	elif (channel == PumpBed1) and VDir == 0 and PStatus == 1 :
-			Sensor = "Pump 1"
-		        count3 = count3 + 0.9
-			flow3 = round(count3 / 10,4)
-			data = (Date, HD1,"0", HD2, h2, Date, "1", HD4, "0", flow3, VolBed2)  #Filling bed 1
+
+       elif (channel == PumpBed1) and VDir == 0 and PStatus == 1:
+                        Sensor = "Pump 1"
+                        count3 = count3 + 1.35
+                        flow3 = round(count4 / 10 , 4)
+                        data = (Date, HD1,h1, HD2, "0", HD3, "0", Date, "1", VolBed1, flow4)  # filling bed 2
 
         elif (channel == PumpBed2) and VDir == 1 and PStatus == 1:
 			Sensor = "Pump 2"
-		        count4 = count4 + 0.5
-			flow4 = round(count4 / 10,4)
+		        count4 = count4 + 1.05
+			flow4 = round(count4 / 10 , 4)
 			data = (Date, HD1,h1, HD2, "0", HD3, "0", Date, "1", VolBed1, flow4)  # filling bed 2
         try:
                 DV.execute(sql, data)
@@ -422,8 +422,7 @@ def Display():
         print ""
         print "\t\tBed 1: ", flow3,"L" #, VolBed1,"L"
         print "\t\tBed 2: ", flow4,"L" #, VolBed2,"L"
-	for thread in threading.enumerate(): 
-    		print(thread.name)                
+                
 
 
 def dbRead(table):
@@ -560,14 +559,7 @@ def DataWrite():
 					passwd="a-51d41e",
 					database="Farm"
 			)
-
 			SheD = Farm.cursor()
-			# select * from farmdata order by date desc limit 1;
-			# +---------------------+------+--------+-------+---------+-----------+------+------+
-			# | date                | main | lights | ExFan | AirPump | WaterPump | 3wv  | 3wvD |
-			# +---------------------+------+--------+-------+---------+-----------+------+------+
-			# | 2020-03-21 15:39:09 | On   | On     | Off   | Off     | Off       | On   | Circ |
-			# +---------------------+------+--------+-------+---------+-----------+------+------+
 			sql = "insert INTO Farm.farmdata (date,main,lights,ExFan,AirPump,WaterPump,3wv,3wvD) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
 			val = (Date, main, Lights, ExFan, APump, WPump, ValveS,ValveD)
 			SheD.execute(sql, val)
@@ -599,9 +591,6 @@ def pHECT():
                         TDS = float (float(TDS) / 1.0)
                         S = float (float(S) * 1000)
                         SG = float (float(SG) / 1.0)
-                        ########
-                        # Temp #
-                        ########
 			path = "/sys/bus/w1/devices/"
                         dir_list = os.listdir(path)
                         for path in dir_list:
@@ -645,42 +634,32 @@ def pHECT():
                                 Farm.close
 
 class atlas_i2c:
-                long_timeout = 1.5 # the timeout needed to query readings and calibrations
-                short_timeout = .5 # timeout for regular commands
-                default_bus = 1 # the default bus for I2C on the newer Raspberry Pis, certain older boards use bus 0
-                default_address = 99 # the default address for the pH sensor
+                long_timeout = 1.5 
+                short_timeout = .5 
+                default_bus = 1 
+                default_address = 99 
                 def __init__(self, address=default_address, bus=default_bus):
-                        # open two file streams, one for reading and one for writing
-                        # the specific I2C channel is selected with bus it is usually 1, except for older revisions where its 0 wb and rb indicate binary read and write
                         self.file_read = io.open("/dev/i2c-" + str(bus), "rb", buffering=0)
                         self.file_write = io.open("/dev/i2c-" + str(bus), "wb", buffering=0)
-                        # initializes I2C to either a user specified or default address
                         self.set_i2c_address(address)
                 def set_i2c_address(self, addr):
-                        # set the I2C communications to the slave specified by the address
-                        0 # The commands for I2C dev using the ioctl functions are specified in
-                        # the i2c-dev.h file from i2c-tools
+#                        0 # The commands for I2C dev using the ioctl functions are specified in
                         I2C_SLAVE = 0x703
                         fcntl.ioctl(self.file_read, I2C_SLAVE, addr)
                         fcntl.ioctl(self.file_write, I2C_SLAVE, addr)
                 def write(self, string):
-                        # appends the null character and sends the string over I2C
                         string += "\00"
                         self.file_write.write(string)
                 def read(self, num_of_bytes=31):
-                        # reads a specified number of bytes from I2C, then parses and displays the result
-                        res = self.file_read.read(num_of_bytes) # read from the board
-                        response = filter(lambda x: x != '\x00', res) # remove the null characters to get the response
-                        if (ord(response[0]) == 1): # if the response isnt an error
-                                        char_list = map(lambda x: chr(ord(x) & ~0x80), list(response[1:])) # change MSB to 0 for all received characters except the first and get a list of characters
-                                        # NOTE: having to change the MSB to 0 is a glitch in the raspberry pi, and you shouldn't have to do this!
-                                        return ''.join(char_list) # convert the char list to a string and returns it
+                        res = self.file_read.read(num_of_bytes) 
+                        response = filter(lambda x: x != '\x00', res)
+                        if (ord(response[0]) == 1): 
+                                        char_list = map(lambda x: chr(ord(x) & ~0x80), list(response[1:])) 
+                                        return ''.join(char_list) 
                         else:
                                         return "Error " + str(ord(response[0]))
                 def query(self, string):
-                        # write a command to the board, wait the correct timeout, and read the response
                         self.write(string)
-                        # the read and calibration commands require a longer timeout
                         if ((string.upper().startswith("R")) or
                                         (string.upper().startswith("CAL"))):
                                         time.sleep(self.long_timeout)
@@ -695,7 +674,7 @@ class atlas_i2c:
 
 def Atlas(addr,verb):
                 try:
-                                device = atlas_i2c()  # creates the I2C port object, specify the address or bus if necessary
+                                device = atlas_i2c() 
                                 device.set_i2c_address(int(addr))
                                 try:
                                                 Type = device.query('i')[3:5]
