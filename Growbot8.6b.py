@@ -74,7 +74,9 @@ pHdiff = ""
 def Main():
 	if context == "root":
 		thread = ReadSensors(pHECT)
-		thread2 = ExcCalib(Calibrate)
+		thread2 = Water(Pump)
+		thread3 = ExcCalib(Calibrate)
+		thread3 = Water(Pump)
 		Deamonstat = os.system('systemctl is-active  growbot')
 		if Deamonstat == 768 or Deamonstat == "inactive":
 			Deamonstat = "UserLand"
@@ -83,7 +85,6 @@ def Main():
 			Deamonstat = "Deamon"
 		else:
 			Deamonstat = Deamonstat
-	SLCount = 0
 	while True:
 		if context == "pi":
 #			while True:
@@ -96,53 +97,47 @@ def Main():
                         	thread = ReadSensors(pHECT) 
 	                        thread.setDaemon(True)
         	                thread.start()
-				LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat 
-	                        LogString=str(LogString)
-				SLCount = 0
 			else:
                                 threadStat = "running"
-				if SLCount < 2:
-					LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat 
-        	                        LogString=str(LogString)
-				SLCount = SLCount + 1
-
-                        if thread2.is_alive() is False:
+			
+			if thread2.is_alive() is False:
                                 threadStat2 = "not running"
-                                print "starting Chemical Calibration task"
-                                thread2 = ExcCalib(Calibrate) 
+                                print "starting Watering task"
+                                thread2 = Water(Pump)
                                 thread2.setDaemon(True)
                                 thread2.start()
-				LogString2 = LogString + " ,Cal thread: " + threadStat2
-	                        LogString=str(LogString2)
-				SLCount = 0
+                                
+                        if thread3.is_alive() is False:
+                                threadStat3 = "not running"
+                                print "starting aut-calibration task"
+                                thread3 = ExcCalib(Calibrate)
+                                thread3.setDaemon(True)
+                                thread3.start()
+			
                 	else:
-                        	threadStat2 = "running"
-				if SLCount < 3:
-					LogString2 = LogString + " ,Cal thread: " + threadStat2
-        		                LogString=str(LogString2)
-	                if SLCount < 3:
-				syslog.syslog(syslog.LOG_INFO,LogString)
-				SLCount = SLCount + 1
-
-			try:
-				GPIO.add_event_detect(DrainBed1, GPIO.RISING, callback=countPulse1)
-			except:
-				pass
-			try:
-				GPIO.add_event_detect(DrainBed2, GPIO.RISING, callback=countPulse2)
-			except:
-				pass
-			try:
-				GPIO.add_event_detect(PumpBed1, GPIO.RISING, callback=countPulse1)
-			except:
-				pass
-			try:
-				GPIO.add_event_detect(PumpBed2, GPIO.RISING, callback=countPulse2)	
-			except:
-				pass
+                        	threadStat3 = "running"
+#			try:
+#				GPIO.add_event_detect(DrainBed1, GPIO.BOTH, callback=countPulse1)
+#			except:
+#				pass
+#			try:
+#				GPIO.add_event_detect(DrainBed2, GPIO.BOTH, callback=countPulse2)
+#			except:
+#				pass
+#			try:
+#				GPIO.add_event_detect(PumpBed1, GPIO.BOTH, callback=countPulse1)
+#			except:
+#				pass
+#			try:
+#				GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse2)	
+#			except:
+#				pass
                         Light()
-                        Flood()
+ #                       Flood()
                         HallReset()
+			LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat + " ,Cal thread: " + threadStat2
+	                LogString=str(LogString)
+        	        syslog.syslog(syslog.LOG_INFO,LogString)
 
 class ReadSensors(threading.Thread):
         def __init__(self, Read_Chem_Sensors):
@@ -157,6 +152,13 @@ class ExcCalib(threading.Thread):
                 self.runnable = Exec_Chem_Cal
         def run(self):
                 self.runnable()
+
+class Water(threading.Thread)
+	def __init__(self, Exec_Water):
+		threading.Thread.__init__(self)
+                self.runnable = Exec_Water
+        def run(self):
+                self.runnable()	
 
 def truncate(n, decimals=0):
     multiplier = 1 ** decimals
@@ -207,17 +209,17 @@ def countPulse1(channel):
         if (channel == PumpBed1) and VDir == 0 and PStatus == 1 :
                 Sensor = "Pump 0"
 		if VolBed1 != 0:
-                	count3=VolBed1 * 10 + 2.53
+                	count3=VolBed1 * 10 + 3.53
 		else:
-	                count3 = count3 + 2.53
+	                count3 = count3 + 3.53
                 flow3 = round(count3 / 10,4)
                 data = (Date, HD1,"0", HD2, h2, Date, "1", HD4, "0", flow3, VolBed2)  #Filling bed 1
 
 	elif (channel == DrainBed1):
 		Sensor = "Drain 0"
-		count1 = count1 + 2.53
+		count1 = count1 + 3.53
 		if count3 > 1:
-			count3 = count3 - 0.73
+			count3 = count3 - 4.53
 		else:
 			count3 = 0
 		flow1 = round((count1 / 10),4)
@@ -225,7 +227,8 @@ def countPulse1(channel):
 		data = (Date, Date, "1", HD2, h2, HD3, h3, HD4, h4, flow3, VolBed2)  #Draining bed1
 	if Sensor and flow3 > 0:
 		Sensor = str(Sensor)
-        	LogString="Hall Sensor: " + Sensor + " : " + str(flow3) + "L"
+		flow3 = str(flow3)
+        	LogString="Hall Sensor: " + Sensor + " :" + flow3
                 LogString=str(LogString)
                 syslog.syslog(syslog.LOG_INFO,LogString)
 
@@ -235,7 +238,7 @@ def countPulse1(channel):
 	        Farm.commit()
         except:
                 pass
-	if flow3 <= 0:
+	if flow3 <= -0.1:
 		flow3 = 0
 	Oflow3 = flow3
 def countPulse2(channel):
@@ -293,7 +296,7 @@ def countPulse2(channel):
                         Sensor = "Drain 1"
                         count2 = count2 + 1.37
                         if count4 > 0.3:
-                                count4 = count4 -0.67
+                                count4 = count4 -0.97
                         else:
                                 count4 = 0
                         flow2 = round(count2 / 10,4)
@@ -306,10 +309,10 @@ def countPulse2(channel):
 	        Farm.commit()
         except:
                 pass
-	if Sensor  and float(flow4) != 0:
+	if Sensor and flow4 > 0:
 		Sensor = str(Sensor)
-                #flow4 = str(flow4)
-		LogString="Hall Sensor: " + Sensor + " : " + str(flow4)  + "L"
+                flow4 = str(flow4)
+		LogString="Hall Sensor: " + Sensor + " ," + flow4
 
         	LogString=str(LogString)
 	        syslog.syslog(syslog.LOG_INFO,LogString)
@@ -318,8 +321,6 @@ def countPulse2(channel):
 	flow4 =  str(flow4)
 		
 def HallReset():
-	global flow3
-	global flow4
 	SinceLastHD1 = 0
         SinceLastHD1Sec = 0
         SinceLastHD2 = 0
@@ -351,42 +352,36 @@ def HallReset():
 	SinceLastHD3Sec = SinceLastHD3.seconds
 	SinceLastHD4 = (now - HD4)
 	SinceLastHD4Sec = SinceLastHD4.seconds
-#	try:
-        Farm = mysql.connector.connect(
-      	        host="192.168.1.14",
-              	user="pi",
-                passwd="a-51d41e",
-                database="Farm"
-       	)
-	DV = Farm.cursor()
-	sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
-	if (h1 or h2 or h3 or h4) and SinceLastSec > 25:
-		data = (now, HD1, "0", HD2, "0", HD3, "0", HD4, "0", "0", "0")
-		LogString="Hall Sensor: all CLEAR"
-		Sensor = ""
-	#if Oflow3 == flow3 and 
-	if ((h1 and SinceLastHD1Sec > 35) or (h3 and SinceLastHD3Sec > 35)):
-	#elif Oflow3 == flow3 and (h1 or h3):
-               	data = (now, now, "0", HD2, h2, now, "0", HD4, h4, "0", flow4)
-		LogString="Hall Sensor: Bed0 CLEAR"
-	       	flow3 = 0
-		Sensor = ""
-	#if Oflow4 == flow4 and 
-	if ((h2 and SinceLastHD2Sec > 35) or (h4 and SinceLastHD4Sec > 35)):
-	#elif Oflow4 == flow4 and (h2 or h4):
-               	data = (now, HD1, h1, now, "0", HD3, h3, now, "0", flow3, "0")
-		LogString="Hall Sensor: Bed1 CLEAR"
-		flow4 = 0
-		Sensor = ""
-        try:
-		DV.execute(sql, data)
-       		DV.close
-       		Farm.commit()
+	try:
+	        Farm = mysql.connector.connect(
+              	        host="192.168.1.14",
+                       	user="pi",
+                        passwd="a-51d41e",
+       	                database="Farm"
+               	)
+		DV = Farm.cursor()
+		sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
+		if (h1 or h2 or h3 or h4) and SinceLastSec > 25:
+			data = (now, HD1, "0", HD2, "0", HD3, "0", HD4, "0", "0", "0")
+			LogString="Hall Sensor: all CLEAR"
+		elif Oflow3 == flow3 and (SinceLastHD1Sec > 15 or SinceLastHD3Sec > 15):
+		#elif Oflow3 == flow3 and (h1 or h3):
+                       	data = (now, HD1, "0", HD2, h2, HD3, "0", HD4, h4, "0", flow4)
+			LogString="Hall Sensor: Bed1 CLEAR"
+		       	flow3 = 0	
+		elif Oflow4 == flow4 and (SinceLastHD2Sec > 15 or SinceLastHD4Sec > 15):
+		#elif Oflow4 == flow4 and (h2 or h4):
+                       	data = (now, HD1, h1, HD2, "0", HD3, h3, HD4, "0", flow3, "0")
+			LogString="Hall Sensor: Bed2 CLEAR"
+			flow4 = 0
+                DV.execute(sql, data)
+       	        DV.close
+       	        Farm.commit()
         	LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
+	        syslog.syslog(syslog.LOG_INFO,LogString)
 
        	except:
-      	        pass
+       	        pass
 
 
 def Light():
@@ -411,13 +406,13 @@ def Light():
                         GPIO.output(26, GPIO.HIGH)
                         GPIO.output(12, GPIO.HIGH)
 	       		DataWrite()
-			LogString="Lights: "+ now +" Lights ON"
+			LogString="Lights ON"
 	                syslog.syslog(syslog.LOG_INFO,LogString)
         else:
                 if LStatus:
                         GPIO.output(12, GPIO.LOW)
         		DataWrite()
-			LogString="Lights: " + now + "Lights OFF"
+			LogString="Lights: OFF"
 			LogString=str(LogString)
 	                syslog.syslog(syslog.LOG_INFO,LogString) 
 
@@ -427,10 +422,23 @@ def Flood():
 	global NextFlood
 	global period
 	global Sensor
-	global flow1
-        global flow2
-        global flow3
-        global flow4
+	try:
+		GPIO.add_event_detect(DrainBed1, GPIO.BOTH, callback=countPulse1)
+	except:
+		pass
+	try:
+		GPIO.add_event_detect(DrainBed2, GPIO.BOTH, callback=countPulse2)
+	except:
+		pass
+	try:
+		GPIO.add_event_detect(PumpBed1, GPIO.BOTH, callback=countPulse1)
+	except:
+		pass
+	try:
+		GPIO.add_event_detect(PumpBed2, GPIO.BOTH, callback=countPulse2)	
+	except:
+		pass
+	
 	PStatus = GPIO.input(21)
 	ValveD = GPIO.input(6)
 	now = datetime.now()
@@ -447,47 +455,38 @@ def Flood():
 		LogString="Pump: Flooding Bed 0"
                 LogString=str(LogString)
                 syslog.syslog(syslog.LOG_INFO,LogString)
-		while Sensor != "Drain 0":
+		while Sensor!= "Drain 0": # and flow1 < (flow3 / 50):
 			GPIO.output(26, GPIO.HIGH)
 			GPIO.output(21, GPIO.HIGH)
 			DataWrite()
-			#HallReset()
-			LogString="Pump: Flooding Bed 0, Pump flow: " + str(flow3)
-                        LogString=str(LogString)
-                        syslog.syslog(syslog.LOG_INFO,LogString)
-		flow1 = float(flow1)
-		flow3 = float(flow3)
-                while  flow1 < (flow3 / 100):
+		try:
+			flow1 = float(flow1)
+			flow3 = float(flow3)
+		except:
+			flow1 = 0
+			flow3 = 0
+		while  flow1 < (flow3 / 100) or flow1 == '0':
 			DataWrite()
-			#HallReset()
-			LogString="Pump: Draining Bed 0, Pump flow: " + str(flow1) + "/" + str(flow3)
-	       	        LogString=str(LogString)
+			HallReset()
+			LogString="Pump: Draining Bed 0"
+        	        LogString=str(LogString)
 	                syslog.syslog(syslog.LOG_INFO,LogString)
 		Valve(1)
 		GPIO.output(21, GPIO.HIGH)
 		LogString="Pump: Flooding Bed 1"
                 LogString=str(LogString)
                 syslog.syslog(syslog.LOG_INFO,LogString)
-		while Sensor != "Drain 1":
+		while Sensor!= "Drain 1": # and flow2 < (flow4 / 50):
 			DataWrite()
-			#HallReset()
+			HallReset()
 			GPIO.output(26, GPIO.HIGH)
 		        GPIO.output(21, GPIO.HIGH)
-			LogString="Pump: Flooding Bed 1, Pump flow: " + str(flow4)
-        	        LogString=str(LogString)
-                	syslog.syslog(syslog.LOG_INFO,LogString)
-		flow2 = float(flow2)
-		flow4 = float(flow4)
-		while  float(flow2) < (float(flow4) / 100):
+		while flow2 < 0.5:
 			DataWrite()
-			#HallReset()
-			LogString="Pump: Draining Bed 1, Drain flow: " + str(flow2) + "/" + str(flow4)
+			HallReset()
+			LogString="Pump: Draining Bed 1"
                         LogString=str(LogString)
                         syslog.syslog(syslog.LOG_INFO,LogString)
-
-		LogString="Pump: Draining Bed 1 Pump OFF"
-                LogString=str(LogString)
-                syslog.syslog(syslog.LOG_INFO,LogString)
 		GPIO.output(21, GPIO.LOW)
 		now = datetime.now()
                 NextFlood = now + DT.timedelta(hours = int(period))
@@ -509,7 +508,6 @@ def Flood():
         	flow2 == 0
         	flow3 == 0
 	        flow4 == 0
-		HallReset()
 	else:
 		GPIO.output(21, GPIO.LOW)
 	DataWrite()
@@ -629,7 +627,7 @@ def Display():
         print "Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t     S:", S,"ppm"
         print "\t\t\t\t\t\t\t\t\t    SG:",SG
         print "" 
-        print "\t\tmode:", mode, "   period:", period,"h", "\t\t     Dispensed pH-/pH+:", phm,"(",phmTV,")/",php,"(",phpTV,")"
+        print "\t\tmode:", mode, "   period:", period , "\t\t     Dispensed pH-/pH+:", phm,"(",phmTV,")/",php,"(",phpTV,")"
         print "\t\tLastFlood", LastFlood #, "\t\t Dispensed GrowA/GrowB: 0.00 / 0.00"
         print "\t\tNextFlood", NextFlood #, "\t\t   Dispensed FloA/FloB: 0.00 / 0.00"
         print ""
@@ -831,19 +829,10 @@ def pHECT():
                         try:
 				if temp > 45:
                                 	temp = '28'
-                        	if temp > 24 and temp < 45:
-					if not GPIO.input(20):
-	                                	GPIO.output(20, GPIO.HIGH)
-						LogString="Fan: Temp: " + str(temp) + "C, Fan STARTED"
-				                LogString=str(LogString)
-                				syslog.syslog(syslog.LOG_INFO,LogString)
-
-                        	elif temp < 22.8  or temp > 50:
-					if GPIO.input(20):
-	                                	GPIO.output(20, GPIO.LOW)
-						LogString="Fan: Temp: " + str(temp) + "C, Fan STOPPED"
-                                	        LogString=str(LogString)
-                                        	syslog.syslog(syslog.LOG_INFO,LogString)
+                        	if temp > 29.8 and temp < 45:
+                                	GPIO.output(20, GPIO.HIGH)
+                        	elif temp < 28.3  or temp > 50:
+                                	GPIO.output(20, GPIO.LOW)
                         except:
 				temp = '23.57'
 			last=dbRead('H2O')
@@ -901,10 +890,10 @@ def Calibrate():
                         myresult = cursor.fetchone()
                         avg5min = myresult[0] 
                         cursor.close 
-#                        try:
-			avg5min = round(float(avg5min), 4)
-#			except:
-#				avg5min= "0"
+                        try:
+				avg5min = round(float(avg5min), 4)
+			except:
+				avg5min= "0"
 			LogString="Cal thread: pH: " + str(pH) + " 5min avg:  " + str(avg5min) + " Last Cal: " + date
         	        LogString=str(LogString)
 	                syslog.syslog(syslog.LOG_INFO,LogString)
@@ -928,31 +917,27 @@ def Calibrate():
 				VVegA = Cal[12]
 				DVegB = Cal[13]
 				VVegB = Cal[14]
-				pHdiff = round (5.5 - (float(pH)),2)
+				pHdiff = round ((float(pH) -5.5),2)
 				pHVol = round ((pHdiff * 0.5 * 100), 2)
-				LogString="Cal thread: Calibrating for " + str(abs(pHdiff)) + " with " + str(abs(pHVol)) + "mL"
+				LogString="Cal thread: Calibrating for " + str(pHdiff) + " with " + str(pHVol)
        	                        LogString=str(LogString)
                                 syslog.syslog(syslog.LOG_INFO,LogString)
 				cursor = Farm.cursor()
 				sql = "insert into Farm.Cal (date, pHDelta, ECDelta, DpHp, VpHp, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB) VALUES(%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s)"
-				if pHdiff < 0:
+				if pHdiff > '0':
 					phstr = "D," + str(pHVol) + ",2"
 					#Atlas(102, phstr)
-					LogString="Cal thread: Calibrated " + str(abs(pHVol)) +"mL of pH-"
+					LogString="Cal thread: Calibrated " + str(pHVol) +"mL of pH-"
        		                        LogString=str(LogString)
                 	                syslog.syslog(syslog.LOG_INFO,LogString)
 					pHmr = Atlas(102,"D,?")
 		                        while pHmr == "Error 254" or pHmr == "Error 255" or pHmr == "?I,PMP,1.02":
-	               	                	crp,phm,crp2 = pHmr.split(',')
-						while not isinstance(phm, float):
-							pHmr = Atlas(102,"D,?")
-			                        	try:
-								crp,phm,crp2 = pHmr.split(',')
-								phm = float (float(phm) /1.0)
-							except:
-								pass
-					val = (Date, pHdiff,ECDelta, DpHp, VpHp, Date, pHVol, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
-				elif pHdiff > 0:
+                	                	pHmr = Atlas(102,"D,?")
+                			        pHmr.split(',')
+			                        crp,phm,crp2 = pHmr.split(',')
+               				phm = float (float(phm) /1.0)
+					val = (Date, pHdiff,ECDelta, DpHp, VpHp, Date, phm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
+				elif pHdiff < '0':
 					pHVol = abs(pHVol)
 					phstr = "D," + str(pHVol ) + ",2"
 					#Atlas(101, phstr)
@@ -961,26 +946,22 @@ def Calibrate():
                                         syslog.syslog(syslog.LOG_INFO,LogString)
 					pHpr = Atlas(101,"D,?")
                                         while pHpr == "Error 254" or pHpr == "Error 255" or pHpr == "?I,PMP,1.02":
-						crp,php,crp2 = pHpr.split(',')
-						while not isinstance(php, float):
-                                        	        pHpr = Atlas(102,"D,?")
-							try:
-								crp,php,crp2 = pHpr.split(',')
-								php = float (float(php) /1.0)
-							except:
-                                                                pass
+                                                pHpr = Atlas(102,"D,?")
+                                        pHpr.split(',')
+                                        crp,php,crp2 = pHpr.split(',')
+                                       	php = float (float(php) /1.0)
 					val = (Date, pHdiff,ECDelta, Date, pHVol, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
 				delais = 300
 				cursor.execute(sql, val)
 				Farm.commit()
 				cursor.close
 				Farm.close
-#		else:
-#			LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date + " (" + str(SinceLastMin) + " min(" + str(delais) + "))"
-#	                LogString=str(LogString)
-#       	        syslog.syslog(syslog.LOG_INFO,LogString)
-#			time.sleep(delais)
-		delais = delais + 10
+		else:
+			LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date + " (" + str(SinceLastMin) + " min(" + str(delais) + "))"
+	                LogString=str(LogString)
+        	        syslog.syslog(syslog.LOG_INFO,LogString)
+			time.sleep(delais)
+			delais = delais + 10
 class atlas_i2c:
                 long_timeout = 1.5 # the timeout needed to query readings and calibrations
                 short_timeout = .5 # timeout for regular commands
