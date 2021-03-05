@@ -1,53 +1,32 @@
-#! /bin/sh
-valve=$1
-raspi-gpio set 5 op
-raspi-gpio set 6 op
+#!/usr/bin/env python
+#!/usr/bin/env python
+import time
+import serial
+import sys
 
-Master=$(raspi-gpio get 5 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
-Dir=$(raspi-gpio get 6 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
+ser = serial.Serial(
+        port='/dev/ttyAMA0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
+        baudrate = 300,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS,
+        timeout=1
+)
+counter=0
 
-case $valve in
-0|c|C|-c|-C|--cycle)
-	if [ $Dir -eq "1" ]
-        then
-		#echo $valve $Dir
-		raspi-gpio set 5 dl
-        	sleep 0.5
-		raspi-gpio set 6 dl
-		sleep 12
-	else
-		#echo $valve $Dir
-		raspi-gpio set 5 dh
-	fi
-  ;;
-1|f|F|-f|-F|--feed)
-	if [ $Dir -eq "0" ]
-        then
-		#echo $valve $Dir
-		raspi-gpio set 5 dl
-		sleep 0.5
-		raspi-gpio set 6 dh
-		sleep 12
-	else
-		#echo $valve $Dir
-		raspi-gpio set 5 dh
-	fi
-  ;;
-esac
-gpio -g write 5 1
-Master=$(raspi-gpio get 5 | awk -F" " '{print $3}' | awk -F"=" '{print $2}') 
-Dir=$(raspi-gpio get 6 | awk -F" " '{print $3}' | awk -F"=" '{print $2}')
-
-if [ $Master -eq "0" ]
-then 
-	Master="On"
-else 
-	Master="Off"
-fi
-if [ $Dir -eq "0" ]
-then 
-        Dir="Bed 0"
-else 
-        Dir="Bed 1"
-fi
-echo "Power(5): "$Master "  Dir(6):" $Dir
+while 1:
+	if len(sys.argv) == 1:
+		for counter in range(4):
+			print ("V%d \n"%(counter))
+			ser.write("V%d \n"%(counter))
+        		time.sleep(1)
+        		counter += 1
+	else:
+			argnum =  len(sys.argv)
+			if argnum > 3:
+				value = 0
+			else:
+				value = str(sys.argv[1])
+			ser.write("V%s \n"%(value ))
+			time.sleep(1)
+			exit()
