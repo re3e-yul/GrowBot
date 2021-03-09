@@ -12,6 +12,7 @@ import fcntl
 import syslog
 import getpass
 import select
+import serial
 DrainBed1 = 25
 DrainBed2 = 22
 PumpBed1 = 24
@@ -106,20 +107,20 @@ def Main():
         	                        LogString=str(LogString)
 				SLCount = SLCount + 1
 
-                        if thread2.is_alive() is False:
-                                threadStat2 = "not running"
-                                print "starting Chemical Calibration task"
-                                thread2 = ExcCalib(Calibrate) 
-                                thread2.setDaemon(True)
-                                thread2.start()
-				LogString2 = LogString + " ,Cal thread: " + threadStat2
-	                        LogString=str(LogString2)
-				SLCount = 0
-                	else:
-                        	threadStat2 = "running"
-				if SLCount < 3:
-					LogString2 = LogString + " ,Cal thread: " + threadStat2
-        		                LogString=str(LogString2)
+  #                      if thread2.is_alive() is False:
+  #                              threadStat2 = "not running"
+  #                              print "starting Chemical Calibration task"
+  #                              thread2 = ExcCalib(Calibrate) 
+  #                              thread2.setDaemon(True)
+  #                              thread2.start()
+#				LogString2 = LogString + " ,Cal thread: " + threadStat2
+#	                        LogString=str(LogString2)
+#				SLCount = 0
+ #               	else:
+#                        	threadStat2 = "running"
+#				if SLCount < 3:
+#					LogString2 = LogString + " ,Cal thread: " + threadStat2
+ #       		                LogString=str(LogString2)
 	                if SLCount < 3:
 				syslog.syslog(syslog.LOG_INFO,LogString)
 				SLCount = SLCount + 1
@@ -404,7 +405,7 @@ def Light():
         else:
                 mode = "Vegetative"
                 DayStart = "08:00:00"
-                DayEnd = "19:00:00"
+                DayEnd = "22:00:00"
 
         if now > DayStart  and  now < DayEnd:
                 if not LStatus:
@@ -443,7 +444,7 @@ def Flood():
         NextFlood = Shed[4]
 	SinceLast = now-LastFlood
 	if now >= NextFlood:
-		Valve(0)
+		Valve(1)
 		LogString="Pump: Flooding Bed 0"
                 LogString=str(LogString)
                 syslog.syslog(syslog.LOG_INFO,LogString)
@@ -463,7 +464,7 @@ def Flood():
 			LogString="Pump: Draining Bed 0, Pump flow: " + str(flow1) + "/" + str(flow3)
 	       	        LogString=str(LogString)
 	                syslog.syslog(syslog.LOG_INFO,LogString)
-		Valve(1)
+		Valve(2)
 		GPIO.output(21, GPIO.HIGH)
 		LogString="Pump: Flooding Bed 1"
                 LogString=str(LogString)
@@ -514,32 +515,49 @@ def Flood():
 		GPIO.output(21, GPIO.LOW)
 	DataWrite()
 	HallReset()
-		
+
 def Valve(dir):
-        now = datetime.now()
-        now = now.strftime("%Y-%m-%d %H:%M:%S")
-        OnOff = GPIO.input(5)
-        ValveD = GPIO.input(6)
-        if dir != ValveD:
-		LogString="3Way Valve: Moving to bed " + str(dir)
-                LogString=str(LogString)
-                syslog.syslog(syslog.LOG_INFO,LogString)
-                if ValveD:
-                        GPIO.output(5, GPIO.LOW)
-                        GPIO.output(6, GPIO.LOW)
-                        t_end = time.time() + 13
-                        while time.time() < t_end:
-				DataWrite()
-                        GPIO.output(5, GPIO.HIGH)
-                        DataWrite()
-                if not ValveD:
-                        GPIO.output(5, GPIO.LOW)
-                        GPIO.output(6, GPIO.HIGH)
-                        t_end = time.time() + 13
-                        while time.time() < t_end:
-				DataWrite()
-                        GPIO.output(5, GPIO.HIGH)
-			DataWrite()
+
+	ser = serial.Serial(
+        	port='/dev/ttyAMA0',
+	        baudrate = 300,
+        	parity=serial.PARITY_NONE,
+	        stopbits=serial.STOPBITS_ONE,
+        	bytesize=serial.EIGHTBITS,
+	        timeout=1
+	)
+	value = str(sys.argv[1])
+	ser.write("V%s \n"%(value ))
+	value = ser.readline()
+	while not str(value):
+		value = ser.readline()
+	return value
+		
+#def Valve(dir):
+#        now = datetime.now()
+#        now = now.strftime("%Y-%m-%d %H:%M:%S")
+#        OnOff = GPIO.input(5)
+#        ValveD = GPIO.input(6)
+#        if dir != ValveD:
+#		LogString="3Way Valve: Moving to bed " + str(dir)
+#                LogString=str(LogString)
+#                syslog.syslog(syslog.LOG_INFO,LogString)
+#                if ValveD:
+#                        GPIO.output(5, GPIO.LOW)
+#                        GPIO.output(6, GPIO.LOW)
+#                        t_end = time.time() + 13
+#                        while time.time() < t_end:
+#				DataWrite()
+#                        GPIO.output(5, GPIO.HIGH)
+#                        DataWrite()
+#                if not ValveD:
+#                        GPIO.output(5, GPIO.LOW)
+#                        GPIO.output(6, GPIO.HIGH)
+#                        t_end = time.time() + 13
+#                        while time.time() < t_end:
+#				DataWrite()
+#                        GPIO.output(5, GPIO.HIGH)
+#			DataWrite()
 			
 def Display():
         global Sensor
@@ -812,40 +830,54 @@ def pHECT():
                         TDS = float (float(TDS) / 1.0)
                         S = float (float(S) * 1000)
                         SG = float (float(SG) / 1.0)
-                        ########
+			ser = serial.Serial(
+                		port='/dev/ttyAMA0',
+		                baudrate = 300,
+                		parity=serial.PARITY_NONE,
+		                stopbits=serial.STOPBITS_ONE,
+		                bytesize=serial.EIGHTBITS,
+                		timeout=1
+		        )
+			value="t"
+			ser.write("V%s \n"%(value ))
+		        temp = ser.readline()
+        		while not str(temp):
+		                temp = ser.readline()
+			temp=float(temp)
+		        ########
                         # Temp #
                         ########
-			path = "/sys/bus/w1/devices/"
-                        dir_list = os.listdir(path)
-                        for path in dir_list:
-                                if '28' in path:
-                                        path = "/sys/bus/w1/devices/" + path + "/w1_slave"
-                                        f = open(path, "r")
-                                        for last_line in f:
-                                                try:
-                                                        temp = last_line.split()
-                                                        temp = str(temp[-1])
-                                                        temp = (float(temp.strip("t=")) /1000 )
-                                                except:
-                                                       pass
-                        try:
-				if temp > 45:
-                                	temp = '28'
-                        	if temp > 24 and temp < 45:
-					if not GPIO.input(20):
-	                                	GPIO.output(20, GPIO.HIGH)
-						LogString="Fan: Temp: " + str(temp) + "C, Fan STARTED"
-				                LogString=str(LogString)
-                				syslog.syslog(syslog.LOG_INFO,LogString)
+#			path = "/sys/bus/w1/devices/"
+#                        dir_list = os.listdir(path)
+#                        for path in dir_list:
+#                                if '28' in path:
+#                                        path = "/sys/bus/w1/devices/" + path + "/w1_slave"
+#                                        f = open(path, "r")
+#                                        for last_line in f:
+#                                                try:
+#                                                        temp = last_line.split()
+#                                                        temp = str(temp[-1])
+#                                                        temp = (float(temp.strip("t=")) /1000 )
+#                                                except:
+#                                                       pass
+#                        try:
+#				if temp > 45:
+#                                	temp = '28'
+                       	if temp > 28:
+				if not GPIO.input(20):
+                                	GPIO.output(20, GPIO.HIGH)
+					LogString="Fan: Temp: " + str(temp) + "C, Fan STARTED"
+			                LogString=str(LogString)
+               				syslog.syslog(syslog.LOG_INFO,LogString)
 
-                        	elif temp < 22.8  or temp > 50:
-					if GPIO.input(20):
-	                                	GPIO.output(20, GPIO.LOW)
-						LogString="Fan: Temp: " + str(temp) + "C, Fan STOPPED"
-                                	        LogString=str(LogString)
-                                        	syslog.syslog(syslog.LOG_INFO,LogString)
-                        except:
-				temp = '23.57'
+                       	elif temp < 27:
+				if GPIO.input(20):
+                                	GPIO.output(20, GPIO.LOW)
+					LogString="Fan: Temp: " + str(temp) + "C, Fan STOPPED"
+                               	        LogString=str(LogString)
+                                       	syslog.syslog(syslog.LOG_INFO,LogString)
+#                        except:
+#				temp = '23.57'
 			last=dbRead('H2O')
                         LDate = last[0]
                         date = datetime.now()
@@ -865,7 +897,10 @@ def pHECT():
                                 H2O.close
                                 Farm.commit()
                                 Farm.close
-
+				LogString="pHECT: Temp: " + str(temp) + " ,pH: " + str(pH) + " ,EC: " + str(EC) + " ,TDS: " + str(TDS) + " ,S: " + str(S) + " ,SG: " + str(SG)
+                                LogString=str(LogString)
+                                syslog.syslog(syslog.LOG_INFO,LogString)
+			time.sleep(25)
 def Calibrate():
 	delais = 30
 	while True:
