@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+#!/usr/bin/env python
+import time
+import serial
+import sys
+
+ser = serial.Serial(
+        port='/dev/ttyAMA0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
+        baudrate = 115800,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS,
+        timeout=1
+)
+counter=0
+
+if len(sys.argv) == 1:
+		print ("")
+		print ("USAGE: Valve [OPTION]")
+		print ("             [0-3] move valve to position")
+		print ("               s-S Valve status ,direction and power status")
+		print ("               t-T emperature")
+		print("")
+		print ("STATUS: ")
+		value="s"
+		ser.write("V%s \n"%(value ))
+else:
+		value = str(sys.argv[1])
+		ser.write("V%s \n"%(value ))
+
+value = ser.readline()
+while not str(value):
+	value = ser.readline()
+	time.sleep(0.5)
+print (value)

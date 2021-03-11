@@ -66,7 +66,7 @@ def Hall_handler1(pin):
     global flow4
     global ReStr
     global H1Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    uart =machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
     if pin.value():
         #uart.write(str(pin))
         #print(pin)
@@ -83,11 +83,11 @@ def Hall_handler1(pin):
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
+            uart.write(str(ReStr))
+            utime.sleep(0.2)
             H1Status = ReStr2
             ReStr = ""
             led.toggle()
-            #utime.sleep(0.7)
             return (H1Status)
 
 def Hall_handler2(pin):
@@ -102,7 +102,7 @@ def Hall_handler2(pin):
     global flow4
     global ReStr
     global H2Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    uart =machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
     if pin.value():
         if pin is Hall_Pump_Bed1:
             now = utime.localtime()
@@ -117,11 +117,12 @@ def Hall_handler2(pin):
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
+            uart.write(str(ReStr))
+            utime.sleep(0.2)
+            
             H2Status = ReStr2
             ReStr = ""
             led.toggle()
-            #utime.sleep(0.7)
             return (H2Status)
 
 def Hall_handler3(pin):
@@ -136,7 +137,7 @@ def Hall_handler3(pin):
     global flow4
     global ReStr
     global H3Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    uart =machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
     if pin.value():
         if pin is Hall_Pump_Bed2:
             Sensor = 'Pump2'
@@ -151,13 +152,13 @@ def Hall_handler3(pin):
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) +str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
+            uart.write(str(ReStr))
+            utime.sleep(0.2)
             H3Status = ReStr2
             ReStr = ""
             led.toggle()
-            #utime.sleep(0.7)
             return (H3Status)
-            
+
 def Hall_handler4(pin):
     global count0
     global count1
@@ -170,7 +171,7 @@ def Hall_handler4(pin):
     global flow4
     global ReStr
     global H4Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    uart =machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
     if pin.value():
         if pin is Hall_Drain_Bed1:
             Sensor = 'Drain1'
@@ -190,15 +191,13 @@ def Hall_handler4(pin):
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
-            #utime.sleep(0.2)
+            uart.write(str(ReStr))
+            utime.sleep(0.2)
             H4Status = ReStr2
             ReStr = ""
             led.toggle()
-            #utime.sleep(0.7)
             return (H4Status)
-            
-            
+
 def Hall_handler5(pin):
     global count0
     global count1
@@ -211,7 +210,7 @@ def Hall_handler5(pin):
     global flow4
     global ReStr
     global H5Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    uart =machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
     if pin.value():
         if pin is Hall_Drain_Bed2:
             Sensor = 'Drain2'
@@ -230,24 +229,27 @@ def Hall_handler5(pin):
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
-            #utime.sleep(0.2)
+            uart.write(str(ReStr))
+            utime.sleep(0.2)
             H5Status = ReStr2
             ReStr = ""
             led.toggle()
-            #utime.sleep(0.7)
             return (H5Status)
 
 Hall_Calibration.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler1)
-Hall_Pump_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler2)
-Hall_Pump_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler3)
-Hall_Drain_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler4)
-Hall_Drain_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler5)
+Hall_Pump_Bed1.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler2)
+Hall_Pump_Bed2.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler3)
+Hall_Drain_Bed1.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler4)
+Hall_Drain_Bed2.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler5)
 
 
-uart = machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+led.value(0)
+utime.sleep(0.5)
+led.value(1)
+uart = machine.UART(0, baudrate=115800, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
 print(uart)
 print (dir(uart))
+utime.sleep(2)
 uart.write(".\n")
 uart.write("............................................\n")
 uart.write(". hello, i'm a smart valve                 .\n")
@@ -255,6 +257,7 @@ uart.write(". usage: V[1-3]: for port selection        .\n")
 uart.write(".        Vt/VT : Temperature               .\n")
 uart.write(".        Vs/VS : for valve and hall status .\n")
 uart.write("............................................\n")
+utime.sleep(0.5)
 relay1.value(1)
 relay2.value(1)
 relay3.value(1)
@@ -269,7 +272,7 @@ while 1:
         value = value.strip("'b'")
         #print ("Value :", value)
         #uart.write(value)
-        #utime.sleep(0.2)
+        utime.sleep(0.2)
         now = utime.localtime()
         print (str(now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str ("   ") + str(value))
         if value == "V0":
@@ -293,9 +296,9 @@ while 1:
             led.off()
             t_end = utime.time() + 10
             while utime.time() < t_end:
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.on()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.off()
                 #utime.sleep(1)
             uart.write("V1")
@@ -313,13 +316,13 @@ while 1:
             led.off()
             t_end = utime.time() + 13
             while utime.time() < t_end:
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.off()
                 #utime.sleep(1)
             uart.write("V2")
@@ -337,17 +340,17 @@ while 1:
             relay3.value(0)
             t_end = utime.time() + 13
             while utime.time() < t_end:
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.toggle()
-                utime.sleep(0.3)
+                utime.sleep(0.2)
                 led.off()
                 utime.sleep(1)
             uart.write("V3")
@@ -404,8 +407,10 @@ while 1:
         if value == "Vq" or value =="VQ":
             print ("Exit")
             uart.write("Killing myself")
-            utime.sleep(1.5)
+            #utime.sleep(1)
             machine.reset()
+            
+            
         
     
         
