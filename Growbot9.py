@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import RPi.GPIO as GPIO
 import time, sys, os
 from datetime import datetime
@@ -13,6 +12,10 @@ import syslog
 import getpass
 import select
 import serial
+import busio
+import board
+import adafruit_shtc3
+
 DrainBed1 = 25
 DrainBed2 = 22
 PumpBed1 = 24
@@ -91,35 +94,35 @@ def Main():
 	                        Display()
 		elif context == "root": # and Deamonstat == "Deamon":
 			if thread.is_alive() is False:
-							threadStat = "not running"
-							print ("starting Chemical sensors task")
-							thread = ReadSensors(pHECT)
-							thread.setDaemon(True)
-							thread.start()
-							LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat
-							LogString=str(LogString)
-							SLCount = 0
+				threadStat = "not running"
+				thread = ReadSensors(pHECT)
+				thread.setDaemon(True)
+				thread.start()
+				LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat
+				LogString=str(LogString)
+				SLCount = 0
 			else:
-							threadStat = "running"
+				threadStat = "running"
+		
 			if SLCount < 2:
-							LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat
-							LogString=str(LogString)
-							SLCount = SLCount + 1
+				LogString="Deamonstat: " + Deamonstat + " ,Chem thread: " + threadStat
+				LogString=str(LogString)
+				SLCount = SLCount + 1
 
-  #                      if thread2.is_alive() is False:
-  #                              threadStat2 = "not running"
-  #                              print "starting Chemical Calibration task"
-  #                              thread2 = ExcCalib(Calibrate) 
-  #                              thread2.setDaemon(True)
-  #                              thread2.start()
-#				LogString2 = LogString + " ,Cal thread: " + threadStat2
-#	                        LogString=str(LogString2)
-#				SLCount = 0
- #               	else:
-#                        	threadStat2 = "running"
-#				if SLCount < 3:
-#					LogString2 = LogString + " ,Cal thread: " + threadStat2
- #       		                LogString=str(LogString2)
+			if thread2.is_alive() is False:
+				threadStat2 = "not running"
+				print ("starting Chemical Calibration task")
+				thread2 = ExcCalib(Calibrate) 
+				thread2.setDaemon(True)
+				thread2.start()
+				LogString2 = LogString + " ,Cal thread: " + threadStat2
+				LogString=str(LogString2)
+				SLCount = 0
+			else:
+				threadStat2 = "running"
+				if SLCount < 3:
+					LogString2 = LogString + " ,Cal thread: " + threadStat2
+					LogString=str(LogString2)
 			if SLCount < 3:
 				syslog.syslog(syslog.LOG_INFO,LogString)
 				SLCount = SLCount + 1
@@ -142,7 +145,9 @@ def Main():
 				pass
 			Light()
 			Flood()
-			HallReset()
+#			pHECT()
+#			HallReset()
+			
 
 class ReadSensors(threading.Thread):
         def __init__(self, Read_Chem_Sensors):
@@ -309,7 +314,7 @@ def countPulse2(channel):
 	if flow4 <= -0.1:
 		flow4 = 0
 	flow4 =  str(flow4)
-		
+
 def HallReset():
 	global flow3
 	global flow4
@@ -406,13 +411,13 @@ def Light():
 			DataWrite()
 			LogString="Lights: "+ now +" Lights ON"
 			syslog.syslog(syslog.LOG_INFO,LogString)
-		else:
-			if LStatus:
-				GPIO.output(12, GPIO.LOW)
-				DataWrite()
-				LogString="Lights: " + now + "Lights OFF"
-				LogString=str(LogString)
-				syslog.syslog(syslog.LOG_INFO,LogString)
+	else:
+		if LStatus:
+			GPIO.output(12, GPIO.LOW)
+			DataWrite()
+			LogString="Lights: " + now + "Lights OFF"
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
 
 
 def Flood():
@@ -440,68 +445,68 @@ def Flood():
 		LogString="Pump: Flooding Bed 0"
 		LogString=str(LogString)
 		syslog.syslog(syslog.LOG_INFO,LogString)
-	while Sensor != "Drain 0":
-		GPIO.output(26, GPIO.HIGH)
-		GPIO.output(21, GPIO.HIGH)
-		DataWrite()
-		#HallReset()
-		LogString="Pump: Flooding Bed 0, Pump flow: " + str(flow3)
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		flow1 = float(flow1)
-		flow3 = float(flow3)
-	while  flow1 < (flow3 / 100):
-		DataWrite()
-		#HallReset()
-		LogString="Pump: Draining Bed 0, Pump flow: " + str(flow1) + "/" + str(flow3)
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		Valve(2)
-		GPIO.output(21, GPIO.HIGH)
-		LogString="Pump: Flooding Bed 1"
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-	while Sensor != "Drain 1":
-		DataWrite()
-		#HallReset()
-		GPIO.output(26, GPIO.HIGH)
-		GPIO.output(21, GPIO.HIGH)
-		LogString="Pump: Flooding Bed 1, Pump flow: " + str(flow4)
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		flow2 = float(flow2)
-		flow4 = float(flow4)
-	while  float(flow2) < (float(flow4) / 100):
-		DataWrite()
-		#HallReset()
-		LogString="Pump: Draining Bed 1, Drain flow: " + str(flow2) + "/" + str(flow4)
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		LogString="Pump: Draining Bed 1 Pump OFF"
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		GPIO.output(21, GPIO.LOW)
-		now = datetime.now()
-		NextFlood = now + DT.timedelta(hours = int(period))
-		Farm = mysql.connector.connect(
-			host="192.168.1.14",
-			user="pi",
-			passwd="a-51d41e",
-			database="Farm"
-		)
-		SheD = Farm.cursor()
-		sql = "INSERT INTO Farm.Shed (date, mode, period, LastFlood, NextFlood) VALUES (%s, %s, %s, %s,%s)"
-		data = (Date,mode,period,now,NextFlood)
-		SheD.execute(sql,data)
-		SheD.close
-		Farm.commit()
-		Farm.close
-		Valve(0)
-		flow1 == 0
-		flow2 == 0
-		flow3 == 0
-		flow4 == 0
-		HallReset()
+		while Sensor != "Drain 0":
+			GPIO.output(26, GPIO.HIGH)
+			GPIO.output(21, GPIO.HIGH)
+			DataWrite()
+			#HallReset()
+			LogString="Pump: Flooding Bed 0, Pump flow: " + str(flow3)
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+			flow1 = float(flow1)
+			flow3 = float(flow3)
+		while  flow1 < (flow3 / 100):
+			DataWrite()
+			#HallReset()
+			LogString="Pump: Draining Bed 0, Pump flow: " + str(flow1) + "/" + str(flow3)
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+			Valve(2)
+			GPIO.output(21, GPIO.HIGH)
+			LogString="Pump: Flooding Bed 1"
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+		while Sensor != "Drain 1":
+			DataWrite()
+			#HallReset()
+			GPIO.output(26, GPIO.HIGH)
+			GPIO.output(21, GPIO.HIGH)
+			LogString="Pump: Flooding Bed 1, Pump flow: " + str(flow4)
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+			flow2 = float(flow2)
+			flow4 = float(flow4)
+		while  float(flow2) < (float(flow4) / 100):
+			DataWrite()
+			#HallReset()
+			LogString="Pump: Draining Bed 1, Drain flow: " + str(flow2) + "/" + str(flow4)
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+			LogString="Pump: Draining Bed 1 Pump OFF"
+			LogString=str(LogString)
+			syslog.syslog(syslog.LOG_INFO,LogString)
+			GPIO.output(21, GPIO.LOW)
+			now = datetime.now()
+			NextFlood = now + DT.timedelta(hours = int(period))
+			Farm = mysql.connector.connect(
+				host="192.168.1.14",
+				user="pi",
+				passwd="a-51d41e",
+				database="Farm"
+			)
+			SheD = Farm.cursor()
+			sql = "INSERT INTO Farm.Shed (date, mode, period, LastFlood, NextFlood) VALUES (%s, %s, %s, %s,%s)"
+			data = (Date,mode,period,now,NextFlood)
+			SheD.execute(sql,data)
+			SheD.close
+			Farm.commit()
+			Farm.close
+			Valve(0)
+			flow1 == 0
+			flow2 == 0
+			flow3 == 0
+			flow4 == 0
+			HallReset()
 	else:
 		GPIO.output(21, GPIO.LOW)
 	DataWrite()
@@ -518,7 +523,8 @@ def Valve(dir):
 	        timeout=1
 	)
 	value = str(sys.argv[1])
-	ser.write("V%s \n"%(value ))
+	serstr = "V%s \n"%(value )
+	ser.write(serstr.encode())
 	value = ser.readline()
 	while not str(value):
 		value = ser.readline()
@@ -570,11 +576,12 @@ def Display():
 	H2O = dbRead('H2O')
 	date=H2O[0]
 	temp=H2O[1]
-	pH = H2O[2]
-	EC = H2O[3]
-	TDS = H2O[4]
-	S = H2O[5]
-	SG = H2O[6]
+	rh=H2O[2]
+	pH = H2O[3]
+	EC = H2O[4]
+	TDS = H2O[5]
+	S = H2O[6]
+	SG = H2O[7]
 	Vol=dbRead('VolDrain')
 	VolBed1 = Vol[9]
 	VolBed2 = Vol[10]
@@ -629,8 +636,8 @@ def Display():
 	print (T, Sensor)
 	print ("Daemon status: ", Deamonstat)
 	print ("")
-	print ("Lights:\t",Lstatus, "\t\tTemp: ", ('%2.3f'%temp),"c\t\tpH: ", pH,  "\t\t    EC:",EC,"ppm")
-	print ("Pump:\t", Pstatus, "\t\tValve:\t",ValveD, "\t\t\t\t\t   TDS:", TDS,"ppm")
+	print ("Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tRH: ", ('%2.3f'%rh),"\t\tpH: ", pH,  "  EC:",EC,"ppm")
+	print ("Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t\t   TDS:", TDS,"ppm")
 	print ("Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t     S:", S,"ppm")
 	print ("\t\t\t\t\t\t\t\t\t    SG:",SG)
 	print ("")
@@ -640,8 +647,6 @@ def Display():
 	print ("")
 	print ("\t\tBed 1: ", VolBed1,"L", " ")
 	print ("\t\tBed 2: ", VolBed2,"L", " ")
-
-
 
 def dbRead(table):
 	#try:
@@ -662,12 +667,13 @@ def dbRead(table):
 		try:
 			date = myresult[0]
 			Temp = myresult[1]
-			pH = myresult[2]
-			EC = myresult[3]
-			TDS = myresult[4]
-			S = myresult[5]
-			SG = myresult[6]
-			return date, Temp, pH, EC, TDS, S, SG
+			RH = myresult[2]
+			pH = myresult[3]
+			EC = myresult[4]
+			TDS = myresult[5]
+			S = myresult[6]
+			SG = myresult[7]
+			return date, Temp, RH, pH, EC, TDS, S, SG
 		except TypeError:
 			pass
 	if table == "Shed":
@@ -794,7 +800,7 @@ def DataWrite():
 			Farm.commit()
 
 def pHECT():
-	global temp
+	global temperature
 	global pH
 	global EC
 	global TDS
@@ -806,42 +812,38 @@ def pHECT():
 	while True:
 		now = datetime.now()
 		now = now.strftime("%Y-%m-%d %H:%M:%S")
-		pH = Atlas(99,"r")
+		try:
+			pH = Atlas(99,"r")
+		except:
+			pass
 		while pH == "Error 254" or pH == "Error 255" or pH == "?I,pH,1.96":
 			pH = Atlas(99,"r")
+		pH = pH.rstrip('\x00')
 		ECs = Atlas(100,"r")
 		while ECs == "Error 254" or ECs == "Error 255" or ECs == "?I,EC,2.12":
 			ECs = Atlas(100,"r")
-		ECs.split(',')
-		Ec,TDS,S,SG = ECs.split(',')
-		EC = float (float(Ec) /1.0)
-		TDS = float (float(TDS) / 1.0)
-		S = float (float(S) * 1000)
-		SG = float (float(SG) / 1.0)
-		ser = serial.Serial(
-			port='/dev/ttyAMA0',
-			baudrate = 300,
-			parity=serial.PARITY_NONE,
-			stopbits=serial.STOPBITS_ONE,
-			bytesize=serial.EIGHTBITS,
-			timeout=1
-		 	)
-		value="t"
-		ser.write("V%s \n"%(value ))
-		temp = ser.readline()
-		while not str(temp):
-			temp = ser.readline()
-		temp=float(temp)
-		if temp > 28:
+		try:
+			ECs.split(',')
+			Ec,TDS,S,SG = ECs.split(',')
+			EC = float (float(Ec.rstrip('\x00')) /1.0)
+			TDS = float (float(TDS.rstrip('\x00')) / 1.0)
+			S = float (float(S.rstrip('\x00')) * 1000)
+			SG = float (float(SG.rstrip('\x00')) / 1.0)
+		except:
+			pass #ECs == "Error 254"
+		i2c = busio.I2C(board.SCL, board.SDA)
+		sht = adafruit_shtc3.SHTC3(i2c)
+		temperature, rh = sht.measurements
+		if temperature > 28:
 			if not GPIO.input(20):
 				GPIO.output(20, GPIO.HIGH)
-			LogString="Fan: Temp: " + str(temp) + "C, Fan STARTED"
+			LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STARTED"
 			LogString=str(LogString)
 			syslog.syslog(syslog.LOG_INFO,LogString)
-		elif temp < 27:
+		elif temperature < 27:
 			if GPIO.input(20):
 				GPIO.output(20, GPIO.LOW)
-			LogString="Fan: Temp: " + str(temp) + "C, Fan STOPPED"
+			LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STOPPED"
 			LogString=str(LogString)
 			syslog.syslog(syslog.LOG_INFO,LogString)
 		last=dbRead('H2O')
@@ -857,183 +859,221 @@ def pHECT():
 				database="Farm"
 			)
 			H2O = Farm.cursor()
-			sql = "INSERT INTO Farm.H2O (date,Temp,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-			val = (now,temp,pH,Ec,TDS,S,SG)
+			sql = "INSERT INTO Farm.H2O (date,temp,RH,pH,EC,TDS,S,SG) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+			val = (now,temperature,rh,pH,Ec,TDS,S,SG)
 			H2O.execute(sql, val)
 			H2O.close
 			Farm.commit()
 			Farm.close
-			LogString="pHECT: Temp: " + str(temp) + " ,pH: " + str(pH) + " ,EC: " + str(EC) + " ,TDS: " + str(TDS) + " ,S: " + str(S) + " ,SG: " + str(SG)
-			LogString=str(LogString)
-			syslog.syslog(syslog.LOG_INFO,LogString)
-			time.sleep(25)
+		LogString=str("pHECT: temperature: ") + str(temperature) + str(" ,RH: ") + str(rh) + str("% ,pH: ") + str(pH) + " ,EC: " + str(EC) + " ,TDS: " + str(TDS) + " ,S: " + str(S) + " ,SG: " + str(SG)
+		LogString=str(LogString)
+		syslog.syslog(syslog.LOG_INFO,LogString)
+		time.sleep(25)
+
+
+
 def Calibrate():
 	delais = 30
 	while True:
-		global avg24h
-		global avg5min
-		global pHdiff
-		H2O=dbRead('H2O')
-#		date = H2O[0]
-		pH = H2O[2]
-		EC = H2O[3]
-		CAL=dbRead('Cal')
-		date = CAL[0]
-		now = datetime.now()
-		SinceLast = now-date
-		SinceLastMin = SinceLast.seconds / 60
-		date = date.strftime("%Y-%m-%d %H:%M:%S")
-		if (pH < 5.4 or pH > 5.6)  and SinceLastMin > 20:
-			LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		LogString="Cal thread: pre-cal checks"
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		Date = now.strftime("%Y-%m-%d %H:%M:%S")
-		Farm = mysql.connector.connect(
-			host="192.168.1.14",
-			user="pi",
-			passwd="a-51d41e",
-			database="Farm"
-		)
-		cursor = Farm.cursor()
-		cursor.execute("select (avg (pH)) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 5 MINUTE)")
-		myresult = cursor.fetchone()
-		avg5min = myresult[0]
-		cursor.close
-#		try:
-		avg5min = round(float(avg5min), 4)
-#		except:
-#			avg5min= "0"
-		LogString="Cal thread: pH: " + str(pH) + " 5min avg:  " + str(avg5min) + " Last Cal: " + date
-		LogString=str(LogString)
-		syslog.syslog(syslog.LOG_INFO,LogString)
-		if (avg5min < 5.4 or avg5min > 5.6):
-			LogString="Cal thread: Calibrating"
+		last=dbRead('Cal')
+		LDate = last[0]
+		date = datetime.now()
+		SinceLast = date-LDate
+		SinceLastSec = SinceLast.seconds
+		if SinceLastSec > 5:
+			global avg24h
+			global avg5min
+			global pHdiff
+			H2O=dbRead('H2O')
+#			date = H2O[0]
+			pH = H2O[3]
+			EC = H2O[4]
+			CAL=dbRead('Cal')
+			date = CAL[0]
+			now = datetime.now()
+			SinceLast = now-date
+			SinceLastMin = SinceLast.seconds / 60
+			date = date.strftime("%Y-%m-%d %H:%M:%S")
+			if (pH < 5.4 or pH > 5.6)  and SinceLastMin > 20:
+				LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date
 			LogString=str(LogString)
-			syslog.syslog(syslog.LOG_INFO,LogString)
-			Cal=dbRead('Cal')
-			date = Cal[0]
-			pHDelta = Cal[1]
-			ECDelta = Cal[2]
-			DpHp = Cal[3]
-			VpHp = Cal[4]
-			DpHm = Cal[5]
-			VpHm = Cal[6]
-			DFloA = Cal[7]
-			VFloA = Cal[8]
-			DFloB = Cal[9]
-			VFloB = Cal[10]
-			DVegA = Cal[11]
-			VVegA = Cal[12]
-			DVegB = Cal[13]
-			VVegB = Cal[14]
-			pHdiff = round (5.5 - (float(pH)),2)
-			pHVol = round ((pHdiff * 0.5 * 100), 2)
-			LogString="Cal thread: Calibrating for " + str(abs(pHdiff)) + " with " + str(abs(pHVol)) + "mL"
+#			syslog.syslog(syslog.LOG_INFO,LogString)
+			LogString="Cal thread: pre-cal checks"
 			LogString=str(LogString)
-			syslog.syslog(syslog.LOG_INFO,LogString)
+#			syslog.syslog(syslog.LOG_INFO,LogString)
+			Date = now.strftime("%Y-%m-%d %H:%M:%S")
+			Farm = mysql.connector.connect(
+				host="192.168.1.14",
+				user="pi",
+				passwd="a-51d41e",
+				database="Farm"
+			)
 			cursor = Farm.cursor()
-			sql = "insert into Farm.Cal (date, pHDelta, ECDelta, DpHp, VpHp, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB) VALUES(%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s)"
-			if pHdiff < 0:
-				phstr = "D," + str(pHVol) + ",2"
-				#Atlas(102, phstr)
-				LogString="Cal thread: Calibrated " + str(abs(pHVol)) +"mL of pH-"
+			cursor.execute("select (avg (pH)) as pHVariance from H2O where date >= DATE_SUB(NOW(),INTERVAL 5 MINUTE)")
+			myresult = cursor.fetchone()
+			avg5min = myresult[0]
+			cursor.close
+#			try:
+			avg5min = round(float(avg5min), 4)
+#			except:
+#			avg5min= "0"
+			LogString="Cal thread: pH: " + str(pH) + " 5min avg:  " + str(avg5min) + " Last Cal: " + date
+			LogString=str(LogString)
+#			syslog.syslog(syslog.LOG_INFO,LogString)
+			if (avg5min < 5.4 or avg5min > 5.6):
+				LogString="Cal thread: Calibrating"
 				LogString=str(LogString)
-				syslog.syslog(syslog.LOG_INFO,LogString)
-				pHmr = Atlas(102,"D,?")
-				while pHmr == "Error 254" or pHmr == "Error 255" or pHmr == "?I,PMP,1.02":
-					crp,phm,crp2 = pHmr.split(',')
-					while not isinstance(phm, float):
-						pHmr = Atlas(102,"D,?")
-						try:
-							crp,phm,crp2 = pHmr.split(',')
-							phm = float (float(phm) /1.0)
-						except:
-							pass
-				val = (Date, pHdiff,ECDelta, DpHp, VpHp, Date, pHVol, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
-			elif pHdiff > 0:
-				pHVol = abs(pHVol)
-				phstr = "D," + str(pHVol ) + ",2"
-				#Atlas(101, phstr)
-				LogString="Cal thread: Calibrated " + str(pHVol) +"mL of pH+"
+#				syslog.syslog(syslog.LOG_INFO,LogString)
+				Cal=dbRead('Cal')
+				date = Cal[0]
+				pHDelta = Cal[1]
+				ECDelta = Cal[2]
+				DpHp = Cal[3]
+				VpHp = Cal[4]
+				DpHm = Cal[5]
+				VpHm = Cal[6]
+				DFloA = Cal[7]
+				VFloA = Cal[8]
+				DFloB = Cal[9]
+				VFloB = Cal[10]
+				DVegA = Cal[11]
+				VVegA = Cal[12]
+				DVegB = Cal[13]
+				VVegB = Cal[14]
+				pHdiff = round (5.5 - (float(pH)),2)
+				pHVol = round ((pHdiff * 0.5 * 100), 2)
+				LogString="Cal thread: Calibrating for " + str(abs(pHdiff)) + " with " + str(abs(pHVol)) + "mL"
 				LogString=str(LogString)
-				syslog.syslog(syslog.LOG_INFO,LogString)
-				pHpr = Atlas(101,"D,?")
-				while pHpr == "Error 254" or pHpr == "Error 255" or pHpr == "?I,PMP,1.02":
-					crp,php,crp2 = pHpr.split(',')
-					while not isinstance(php, float):
-						pHpr = Atlas(102,"D,?")
-						try:
-							crp,php,crp2 = pHpr.split(',')
-							php = float (float(php) /1.0)
-						except:
-							pass
-				val = (Date, pHdiff,ECDelta, Date, pHVol, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
-				delais = 300
-				cursor.execute(sql, val)
-				Farm.commit()
-				cursor.close
-				Farm.close
-#		else:
-#			LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date + " (" + str(SinceLastMin) + " min(" + str(delais) + "))"
-#	                LogString=str(LogString)
-#       	        syslog.syslog(syslog.LOG_INFO,LogString)
-#			time.sleep(delais)
-		delais = delais + 10
-class atlas_i2c:
-                long_timeout = 1.5 # the timeout needed to query readings and calibrations
-                short_timeout = .5 # timeout for regular commands
-                default_bus = 1 # the default bus for I2C on the newer Raspberry Pis, certain older boards use bus 0
-                default_address = 99 # the default address for the pH sensor
-                def __init__(self, address=default_address, bus=default_bus):
-                        # open two file streams, one for reading and one for writing
-                        # the specific I2C channel is selected with bus it is usually 1, except for older revisions where its 0 wb and rb indicate binary read and write
-                        self.file_read = io.open("/dev/i2c-" + str(bus), "rb", buffering=0)
-                        self.file_write = io.open("/dev/i2c-" + str(bus), "wb", buffering=0)
-                        # initializes I2C to either a user specified or default address
-                        self.set_i2c_address(address)
-                def set_i2c_address(self, addr):
-                        # set the I2C communications to the slave specified by the address
-                        0 # The commands for I2C dev using the ioctl functions are specified in
-                        # the i2c-dev.h file from i2c-tools
-                        I2C_SLAVE = 0x703
-                        fcntl.ioctl(self.file_read, I2C_SLAVE, addr)
-                        fcntl.ioctl(self.file_write, I2C_SLAVE, addr)
-                def write(self, string):
-                        # appends the null character and sends the string over I2C
-                        string += "\00"
-                        self.file_write.write(string)
-                def read(self, num_of_bytes=31):
-                        # reads a specified number of bytes from I2C, then parses and displays the result
-                        res = self.file_read.read(num_of_bytes) # read from the board
-                        response = filter(lambda x: x != '\x00', res) # remove the null characters to get the response
-                        if (ord(response[0]) == 1): # if the response isnt an error
-                                        char_list = map(lambda x: chr(ord(x) & ~0x80), list(response[1:])) # change MSB to 0 for all received characters except the first and get a list of characters
-                                        # NOTE: having to change the MSB to 0 is a glitch in the raspberry pi, and you shouldn't have to do this!
-                                        return ''.join(char_list) # convert the char list to a string and returns it
-                        else:
-                                        return "Error " + str(ord(response[0]))
-                def query(self, string):
-                        # write a command to the board, wait the correct timeout, and read the response
-                        self.write(string)
-                        # the read and calibration commands require a longer timeout
-                        if ((string.upper().startswith("R")) or
-                                        (string.upper().startswith("CAL"))):
-                                        time.sleep(self.long_timeout)
-                        elif ((string.upper().startswith("SLEEP"))):
-                                        return "sleep mode"
-                        else:
-                                        time.sleep(self.short_timeout)
-                        return self.read()
-                def close(self):
-                        self.file_read.close()
-                        self.file_write.close()
+#				syslog.syslog(syslog.LOG_INFO,LogString)
+				cursor = Farm.cursor()
+				sql = "insert into Farm.Cal (date, pHDelta, ECDelta, DpHp, VpHp, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB) VALUES(%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s, %s,%s)"
+				if pHdiff < 0:
+					phstr = "D," + str(pHVol) + ",2"
+					#Atlas(102, phstr)
+					LogString="Cal thread: Calibrated " + str(abs(pHVol)) +"mL of pH-"
+					LogString=str(LogString)
+#					syslog.syslog(syslog.LOG_INFO,LogString)
+					pHmr = Atlas(102,"D,?")
+					while pHmr == "Error 254" or pHmr == "Error 255" or pHmr == "?I,PMP,1.02":
+						crp,phm,crp2 = pHmr.split(',')
+						while not isinstance(phm, float):
+							pHmr = Atlas(102,"D,?")
+							try:
+								crp,phm,crp2 = pHmr.split(',')
+								phm = float (float(phm) /1.0)
+							except:
+								pass
+					val = (Date, pHdiff,ECDelta, DpHp, VpHp, Date, pHVol, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
+				elif pHdiff > 0:
+					pHVol = abs(pHVol)
+					phstr = "D," + str(pHVol ) + ",2"
+					#Atlas(101, phstr)
+					LogString="Cal thread: Calibrated " + str(pHVol) +"mL of pH+"
+					LogString=str(LogString)
+#					syslog.syslog(syslog.LOG_INFO,LogString)
+					pHpr = Atlas(101,"D,?")
+					while pHpr == "Error 254" or pHpr == "Error 255" or pHpr == "?I,PMP,1.02":
+						crp,php,crp2 = pHpr.split(',')
+						while not isinstance(php, float):
+							pHpr = Atlas(102,"D,?")
+							try:
+								crp,php,crp2 = pHpr.split(',')
+								php = float (float(php) /1.0)
+							except:
+								pass
+					val = (Date, pHdiff,ECDelta, Date, pHVol, DpHm, VpHm, DFloA, VFloA,  DFloB, VFloB, DVegA, VVegA, DVegB, VVegB)
+					delais = 300
+					cursor.execute(sql, val)
+					Farm.commit()
+					cursor.close
+					Farm.close
+#			else:
+#				LogString="Cal thread:" + " " + str(pH) + " " + "Last Cal:" + " " + date + " (" + str(SinceLastMin) + " min(" + str(delais) + "))"
+#	                	LogString=str(LogString)
+#	       		        syslog.syslog(syslog.LOG_INFO,LogString)
+#				time.sleep(delais)
+			delais = delais + 10
+class Atlas_I2C:
+        long_timeout = 1.5              # the timeout needed to query readings and calibrations
+        short_timeout = .5              # timeout for regular commands
+        default_bus = 1                 # the default bus for I2C on the newer Raspberry Pis, certain older boards use bus 0
+        default_address = 98            # the default address for the sensor
+        current_addr = default_address
+
+        def __init__(self, address=default_address, bus=default_bus):
+                # open two file streams, one for reading and one for writing
+                # the specific I2C channel is selected with bus
+                # it is usually 1, except for older revisions where its 0
+                # wb and rb indicate binary read and write
+                self.file_read = io.open("/dev/i2c-"+str(bus), "rb", buffering=0)
+                self.file_write = io.open("/dev/i2c-"+str(bus), "wb", buffering=0)
+
+                # initializes I2C to either a user specified or default address
+                self.set_i2c_address(address)
+
+        def set_i2c_address(self, addr):
+                # set the I2C communications to the slave specified by the address
+                # The commands for I2C dev using the ioctl functions are specified in
+                # the i2c-dev.h file from i2c-tools
+                I2C_SLAVE = 0x703
+                fcntl.ioctl(self.file_read, I2C_SLAVE, addr)
+                fcntl.ioctl(self.file_write, I2C_SLAVE, addr)
+                self.current_addr = addr
+
+        def write(self, cmd):
+                # appends the null character and sends the string over I2C
+                cmd += "\00"
+                cmd = cmd.encode()
+                self.file_write.write(cmd)
+
+        def read(self, num_of_bytes=31):
+                # reads a specified number of bytes from I2C, then parses and displays the result
+                res = self.file_read.read(num_of_bytes)         # read from the board
+                response = list(filter(lambda x: x != '\x00', res))     # remove the null characters to get the response
+                if response[0] == 1:             # if the response isn't an error
+                        # change MSB to 0 for all received characters except the first and get a list of characters
+                        char_list = map(lambda x: chr(x & ~0x80), list(response[1:]))
+                        # NOTE: having to change the MSB to 0 is a glitch in the raspberry pi, and you shouldn't have to do this!
+                        return ''.join(char_list)
+                        #return "Command succeeded " + ''.join(char_list)     # convert the char list to a string and returns it
+                else:
+                        return "Error " + str(response[0])
+
+        def query(self, string):
+                # write a command to the board, wait the correct timeout, and read the response
+                self.write(string)
+
+                # the read and calibration commands require a longer timeout
+                if((string.upper().startswith("R")) or
+                        (string.upper().startswith("CAL"))):
+                        time.sleep(self.long_timeout)
+                elif string.upper().startswith("SLEEP"):
+                        return "sleep mode"
+                else:
+                        time.sleep(self.short_timeout)
+
+                return self.read()
+
+        def close(self):
+                self.file_read.close()
+                self.file_write.close()
+
+        def list_i2c_devices(self):
+                prev_addr = self.current_addr # save the current address so we can restore it after
+                i2c_devices = []
+                for i in range (0,128):
+                        try:
+                                self.set_i2c_address(i)
+                                self.read()
+                                i2c_devices.append(i)
+                        except IOError:
+                                pass
+                self.set_i2c_address(prev_addr) # restore the address we were using
+                return i2c_devices
 
 def Atlas(addr,verb):
                 try:
-                                device = atlas_i2c()  # creates the I2C port object, specify the address or bus if necessary
+                                device = Atlas_I2C()  # creates the I2C port object, specify the address or bus if necessary
                                 device.set_i2c_address(int(addr))
                                 try:
                                                 Type = device.query('i')[3:5]
@@ -1043,6 +1083,8 @@ def Atlas(addr,verb):
                                 return value
                 except IOError:
                                 print ("No I2C port detected")
+
+
         
 if __name__=="__main__":
 
