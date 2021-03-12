@@ -401,8 +401,8 @@ def Light():
 		DayEnd = "18:55:00"
 	else:
 		mode = "Vegetative"
-		DayStart = "08:00:00"
-		DayEnd = "22:00:00"
+		DayStart = "07:00:00"
+		DayEnd = "21:00:00"
 
 	if now > DayStart  and  now < DayEnd:
 		if not LStatus:
@@ -636,10 +636,10 @@ def Display():
 	print (T, Sensor)
 	print ("Daemon status: ", Deamonstat)
 	print ("")
-	print ("Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tRH: ", ('%2.3f'%rh),"\t\tpH: ", pH,  "  EC:",EC,"ppm")
-	print ("Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t\t   TDS:", TDS,"ppm")
-	print ("Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t     S:", S,"ppm")
-	print ("\t\t\t\t\t\t\t\t\t    SG:",SG)
+	print ("Lights:\t",Lstatus, "\tTemp: ", ('%2.3f'%temp),"c\t\tRH: ", ('%2.3f'%rh),"\t\tpH: ", pH,  "\t  EC:",EC,"ppm")
+	print ("Pump:\t", Pstatus, "\tValve:\t",ValveD, "\t\t\t\t\t\t\t TDS:", TDS,"ppm")
+	print ("Fan:\t", Fstatus, "\t\t\t\t\t\t\t\t\t   S:", S,"ppm")
+	print ("\t\t\t\t\t\t\t\t\t\t  SG:",SG)
 	print ("")
 	print ("\t\tmode:", mode, "   period:", period,"h", "\t\t     Dispensed pH-/pH+:", phm,"(",phmTV,")/",php,"(",phpTV,")")
 	print ("\t\tLastFlood", LastFlood) #, "\t\t Dispensed GrowA/GrowB: 0.00 / 0.00"
@@ -834,18 +834,18 @@ def pHECT():
 		i2c = busio.I2C(board.SCL, board.SDA)
 		sht = adafruit_shtc3.SHTC3(i2c)
 		temperature, rh = sht.measurements
-		if temperature > 28:
+		if temperature > 26:
 			if not GPIO.input(20):
 				GPIO.output(20, GPIO.HIGH)
-			LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STARTED"
-			LogString=str(LogString)
-			syslog.syslog(syslog.LOG_INFO,LogString)
-		elif temperature < 27:
+				LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STARTED"
+				LogString=str(LogString)
+				syslog.syslog(syslog.LOG_INFO,LogString)
+		elif temperature < 25:
 			if GPIO.input(20):
 				GPIO.output(20, GPIO.LOW)
-			LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STOPPED"
-			LogString=str(LogString)
-			syslog.syslog(syslog.LOG_INFO,LogString)
+				LogString="Fan: temperature: " + str(temperature) + "C, RH: " + str(rh) + "%, Fan STOPPED"
+				LogString=str(LogString)
+				syslog.syslog(syslog.LOG_INFO,LogString)
 		last=dbRead('H2O')
 		LDate = last[0]
 		date = datetime.now()

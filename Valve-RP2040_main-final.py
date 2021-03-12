@@ -369,12 +369,12 @@ while 1:
                 else:
                     Status_str = "Valve Status: Off\n"
             uart.write(str(Status_str))
-            if H1Status:
+        elif value == "Vs1" or value =="VS1":
                     print ("Calib Status: ",H1Status)
                     H1Statuss = str("Hall1 Status: ") + H1Status.strip("'b'") + str("\n")
                     uart.write(str(H1Statuss))
             
-            if H2Status or H4Status:
+        elif value == "Vs2" or value =="VS2":
                 if H4Status:
                     print ("Bed1 Status: ",H4Status)
                     H4Statuss = str("Bed1 Status: ") + H4Status.strip("'b'") + str("\n")
@@ -384,7 +384,7 @@ while 1:
                     H2Statuss = str("Bed1 Status: ") + H2Status.strip("'b'") + str("\n")
                     uart.write(str(H2Statuss))
             
-            if H3Status or H5Status:
+        elif value == "Vs3" or value =="VS3":
                 if H5Status:
                     print ("Bed2 Status: ",H5Status)
                     H5Statuss = str("Bed2 Status: ") + H5Status.strip("'b'") + str("\n")
