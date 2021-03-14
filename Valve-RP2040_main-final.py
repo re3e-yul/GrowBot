@@ -30,7 +30,7 @@ global H1Status
 global H2Status
 global H3Status
 global H4Status
-global H5Status
+global HCStatus
 Sensor = 0
 count0 = 0
 count1 = 0
@@ -48,11 +48,47 @@ H1Status = ""
 H2Status = ""
 H3Status = ""
 H4Status = ""
-H5Status = ""
+HCStatus = ""
 Status_str =""
 conversion_factor = 3.3 / (65535)
 print(os.uname())
 
+
+def Hall_handler0(pin):
+    global count0
+    global count1
+    global count2
+    global count3
+    global count4
+    global flow1
+    global flow2
+    global flow3
+    global flow4
+    global ReStr
+    global HCStatus
+    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
+    if pin.value():
+        #uart.write(str(pin))
+        #print(pin)
+        if pin is Hall_Calibration:
+            Sensor = 'Calibration'
+            count0 = count0 + 2.53
+            flow_Calib = round(count0 / 10,4)
+            ReStr2 = str(", HC: ") + str(flow_Calib) + str(" L")
+            #ReStr2 = str(flow_Calib) + str(" L")
+            now = utime.localtime()
+            #print (str(ReStr2))
+            #print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
+            ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
+            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
+            ReStr = str("b'") + str(ReStr) + str("\n")
+            ReStr2 = str("b'") + str(ReStr2) + str("\n")
+            #uart.write(str(ReStr))
+            HCStatus = str(ReStr2)
+            ReStr = ""
+            led.toggle()
+            return (HCStatus)
+            
 
 def Hall_handler1(pin):
     global count0
@@ -68,26 +104,25 @@ def Hall_handler1(pin):
     global H1Status
     uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
     if pin.value():
-        #uart.write(str(pin))
-        #print(pin)
-        if pin is Hall_Calibration:
-            Sensor = 'Calibration'
-            count0 = count0 + 2.53
-            flow_Calib = round(count0 / 10,4)
-            ReStr = str(", Hall_Calibration: ") + str(flow_Calib) + str(" L")
-            ReStr2 = str(flow_Calib) + str(" L")
+        if pin is Hall_Pump_Bed1:
             now = utime.localtime()
-            #print (str(ReStr))
-            #print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
+            Sensor = 'Pump1'
+            count1 = count1 + 2.53
+            flow1 = round(count1 / 10,4)
+            ReStr2 = str(", Bed1+: ") + str(flow1) + str(" L")
+            #ReStr2 = str(str(flow1) + str(" L"))
+            print (str(ReStr2))
+            print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
             ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
             #uart.write(str(ReStr))
-            H1Status = ReStr2
+            H2Status = ReStr2
             ReStr = ""
             led.toggle()
             #utime.sleep(0.7)
+            H1Status = str(ReStr2)
             return (H1Status)
 
 def Hall_handler2(pin):
@@ -104,17 +139,17 @@ def Hall_handler2(pin):
     global H2Status
     uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
     if pin.value():
-        if pin is Hall_Pump_Bed1:
+        if pin is Hall_Pump_Bed2:
+            Sensor = 'Pump2'
+            count2 = count2 + 2.53
+            flow2 = round(count2 / 10,4)
+            ReStr2 = str(", Bed2+: ") + str(flow2) + str(" L")
+            #ReStr2 = str(str(flow2) + str(" L"))
             now = utime.localtime()
-            Sensor = 'Pump1'
-            count1 = count1 + 2.53
-            flow1 = round(count1 / 10,4)
-            ReStr = str(", Hall_Pump1: ") + str(flow1) + str(" L")
-            ReStr2 = str(str(flow1) + str(" L"))
-            print (str(ReStr))
-            print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
+            DateNow = str(str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            print (str(DateNow) + str(ReStr2))
             ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
-            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
+            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) +str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
             #uart.write(str(ReStr))
@@ -122,8 +157,9 @@ def Hall_handler2(pin):
             ReStr = ""
             led.toggle()
             #utime.sleep(0.7)
+            H2tatus = str(ReStr2)
             return (H2Status)
-
+            
 def Hall_handler3(pin):
     global count0
     global count1
@@ -138,25 +174,33 @@ def Hall_handler3(pin):
     global H3Status
     uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
     if pin.value():
-        if pin is Hall_Pump_Bed2:
-            Sensor = 'Pump2'
-            count2 = count2 + 2.53
-            flow2 = round(count2 / 10,4)
-            ReStr = str(", Hall_Pump2: ") + str(flow2) + str(" L")
-            ReStr2 = str(str(flow2) + str(" L"))
+        if pin is Hall_Drain_Bed1:
+            Sensor = 'Drain1'
+            count3 = count3 + 2.53
+            if count1 > 1:
+                count1 = count1 - 0.73
+                flow1 = round(count1 / 10,4)
+            else:
+                count1 = 0
+                flow1 = 0
+            ReStr2 = str(", Bed1-: ") + str(flow1) + str(" L")
+            #ReStr2 = str(str(flow1) + str(" L"))
             now = utime.localtime()
-            DateNow = str(str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            print (str(DateNow) + str(ReStr))
+            print (str(ReStr2))
+            print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
             ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
-            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) +str(" ") + str(ReStr2))
+            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
             ReStr = str("b'") + str(ReStr) + str("\n")
             ReStr2 = str("b'") + str(ReStr2) + str("\n")
             #uart.write(str(ReStr))
+            #utime.sleep(0.2)
             H3Status = ReStr2
             ReStr = ""
             led.toggle()
             #utime.sleep(0.7)
+            H3Status = str(ReStr2)
             return (H3Status)
+            
             
 def Hall_handler4(pin):
     global count0
@@ -172,19 +216,18 @@ def Hall_handler4(pin):
     global H4Status
     uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
     if pin.value():
-        if pin is Hall_Drain_Bed1:
-            Sensor = 'Drain1'
-            count3 = count3 + 2.53
-            if count1 > 1:
-                count1 = count1 - 0.73
-                flow1 = round(count1 / 10,4)
+        if pin is Hall_Drain_Bed2:
+            Sensor = 'Drain2'
+            count4 = count4 + 2.53
+            if count2 > 1:
+                count2 = count2 - 0.73
+                flow2 = round(count2 / 10,4)
             else:
-                count1 = 0
-                flow1 = 0
-            ReStr = str(", Hall_Drain1: ") + str(flow1) + str(" L")
-            ReStr2 = str(str(flow1) + str(" L"))
+                count2 = 0
+                flow2 = 0
+            ReStr2 = str(", Bed2-: ") + str(flow2) + str(" L")
+            #ReStr2 = str(str(flow2) + str(" L"))
             now = utime.localtime()
-            print (str(ReStr))
             print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
             ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
             ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
@@ -196,65 +239,27 @@ def Hall_handler4(pin):
             ReStr = ""
             led.toggle()
             #utime.sleep(0.7)
+            H4Status = str(ReStr2)
             return (H4Status)
-            
-            
-def Hall_handler5(pin):
-    global count0
-    global count1
-    global count2
-    global count3
-    global count4
-    global flow1
-    global flow2
-    global flow3
-    global flow4
-    global ReStr
-    global H5Status
-    uart =machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
-    if pin.value():
-        if pin is Hall_Drain_Bed2:
-            Sensor = 'Drain2'
-            count4 = count4 + 2.53
-            if count2 > 1:
-                count2 = count2 - 0.73
-                flow2 = round(count2 / 10,4)
-            else:
-                count2 = 0
-                flow2 = 0
-            ReStr = str(", Hall_Drain2: ") + str(flow2) + str(" L")
-            ReStr2 = str(str(flow2) + str(" L"))
-            now = utime.localtime()
-            print ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
-            ReStr = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(ReStr))
-            ReStr2 = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str(" ") + str(ReStr2))
-            ReStr = str("b'") + str(ReStr) + str("\n")
-            ReStr2 = str("b'") + str(ReStr2) + str("\n")
-            #uart.write(str(ReStr))
-            #utime.sleep(0.2)
-            H5Status = ReStr2
-            ReStr = ""
-            led.toggle()
-            #utime.sleep(0.7)
-            return (H5Status)
 
-Hall_Calibration.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler1)
-Hall_Pump_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler2)
-Hall_Pump_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler3)
-Hall_Drain_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler4)
-Hall_Drain_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler5)
+Hall_Calibration.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler0)
+Hall_Pump_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler1)
+Hall_Pump_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler2)
+Hall_Drain_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler3)
+Hall_Drain_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler4)
 
 
 uart = machine.UART(1, baudrate=115800, tx=Pin(8), rx=Pin(9), bits=8, parity=None, stop=1)
 print(uart)
 print (dir(uart))
 uart.write(".\n")
-uart.write("............................................\n")
-uart.write(". hello, i'm a smart valve                 .\n")
-uart.write(". usage: V[1-3]: for port selection        .\n") 
-uart.write(".        Vt/VT : Temperature               .\n")
-uart.write(".        Vs/VS : for valve and hall status .\n")
-uart.write("............................................\n")
+uart.write(".................................................\n")
+uart.write(".          hello, i'm a smart valve             .\n")
+uart.write(".                                               .\n")
+uart.write(".   usage:   V[1-3] : for port selection        .\n") 
+uart.write(".             Vt/VT : Temperature               .\n")
+uart.write(".        Vs/VS[1-3] : for valve and hall status .\n")
+uart.write(".................................................\n")
 relay1.value(1)
 relay2.value(1)
 relay3.value(1)
@@ -285,7 +290,7 @@ while 1:
             print ('relay2: ' + str(not relay2.value()))
             print ('relay3: ' + str(not relay3.value()))
              
-        if value == "V1":
+        if value == "Vc" or value == "VC":
             print ("Value :", value)
             relay1.value(0)
             relay2.value(1)
@@ -298,14 +303,14 @@ while 1:
                 utime.sleep(0.3)
                 led.off()
                 #utime.sleep(1)
-            uart.write("V1")
+            uart.write("VC")
             Status = value
             print ("")
             print ('relay1: ' + str(not relay1.value()))
             print ('relay2: ' + str(not relay2.value()))
             print ('relay3: ' + str(not relay3.value()))
             
-        if value == "V2":
+        if value == "V1":
             print ("Value :", value)
             relay1.value(0)
             relay2.value(0)
@@ -322,14 +327,14 @@ while 1:
                 utime.sleep(0.3)
                 led.off()
                 #utime.sleep(1)
-            uart.write("V2")
+            uart.write("V1")
             Status = value
             print ("")
             print ('relay1: ' + str(not relay1.value()))
             print ('relay2: ' + str(not relay2.value()))
             print ('relay3: ' + str(not relay3.value()))
             
-        if value == "V3":
+        if value == "V2":
             print ("Value :", value)
             led.off()
             relay1.value(0)
@@ -350,12 +355,12 @@ while 1:
                 utime.sleep(0.3)
                 led.off()
                 utime.sleep(1)
-            uart.write("V3")
+            uart.write("V2")
             Status = value
-            print ("")
-            print ('relay1: ' + str(not relay1.value()))
-            print ('relay2: ' + str(not relay2.value()))
-            print ('relay3: ' + str(not relay3.value()))
+            #print ("")
+            #print ('relay1: ' + str(not relay1.value()))
+            #print ('relay2: ' + str(not relay2.value()))
+            #print ('relay3: ' + str(not relay3.value()))
         
         if value == "Vs" or value =="VS":
             if not relay1.value():
@@ -369,31 +374,96 @@ while 1:
                 else:
                     Status_str = "Valve Status: Off\n"
             uart.write(str(Status_str))
-        elif value == "Vs1" or value =="VS1":
-                    print ("Calib Status: ",H1Status)
-                    H1Statuss = str("Hall1 Status: ") + H1Status.strip("'b'") + str("\n")
-                    uart.write(str(H1Statuss))
+        if value == "Vcs" or value =="VCS":
+            if not HCStatus:
+                now = utime.localtime()
+                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                HCStatus = (str(DateNow) + str(" , HC: 0L\n"))
+            else:
+                print ("Calib Status: ",HCStatus)
+                #HCStatuss = str("Hall1 Status: ") + HCStatus.strip("'b'") + str("\n")
+                HCStatus.strip("'b'") + str("\n")
+            uart.write(str(HCStatus))
             
-        elif value == "Vs2" or value =="VS2":
-                if H4Status:
-                    print ("Bed1 Status: ",H4Status)
-                    H4Statuss = str("Bed1 Status: ") + H4Status.strip("'b'") + str("\n")
-                    uart.write(str(H4Statuss))
-                else:
-                    print ("Bed1 Status: ",H2Status)
-                    H2Statuss = str("Bed1 Status: ") + H2Status.strip("'b'") + str("\n")
-                    uart.write(str(H2Statuss))
+        if value == "V1s" or value =="V1S":
+            if not H1Status:
+                now = utime.localtime()
+                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                H1Status = (str(DateNow) + str(" , H1: 0L\n"))
+            else:
+                #print ("Bed1 Status: ",H2Status)
+                #H2Statuss = str("Bed1 Status: ") + H2Status.strip("'b'") + str("\n")
+                H1Status = H1Status.strip("'b'") + str("\n")
+            uart.write(str(H1Status))
             
-        elif value == "Vs3" or value =="VS3":
-                if H5Status:
-                    print ("Bed2 Status: ",H5Status)
-                    H5Statuss = str("Bed2 Status: ") + H5Status.strip("'b'") + str("\n")
-                    uart.write(str(H5Statuss))
-                else:
-                    print ("Bed2 Status: ",H3Status)
-                    H3Statuss = str("Bed2 Status: ") + H3Status.strip("'b'") + str("\n")
-                    uart.write(str(H3Statuss))
-
+        if value == "V2s" or value =="V2S":
+            if not H2Status:
+                now = utime.localtime()
+                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                H2Status = (str(DateNow) + str(" , H2: 0L\n"))
+            else:
+                #print ("Bed2 Status: ",H2Status)
+                #H2Statuss = str("Bed2 Status: ") + H2Status.strip("'b'") + str("\n")
+                H2Status = H2Status.strip("'b'") + str("\n")
+            uart.write(str(H2Status))
+            
+        if value == "V3s" or value =="V3S":
+            if not H3Status:
+                now = utime.localtime()
+                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                H3Status = (str(DateNow) + str(" , H3: 0L\n"))
+            else:
+                print ("Bed1 Status: ",H3Status)
+                #H4Statuss = str("Bed1 Status: ") + H4Status.strip("'b'") + str("\n")
+                H3Status = H3Status.strip("'b'") + str("\n")
+            uart.write(str(H3Status))
+        
+        if value == "V4s" or value =="V4S":
+            if not H4Status:
+                now = utime.localtime()
+                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                H4Status = (str(DateNow) + str(" , H4: 0L\n"))
+            else:
+                #print ("Bed2 Status: ",H4Status)
+                #H5Statuss = str("Bed2 Status: ") + H4Status.strip("'b'") + str("\n")
+                H4Status = H4Status.strip("'b'") + str("\n")
+            uart.write(str(H4Status))
+            
+        if value == "Vcr" or value =="VCR":
+            now = utime.localtime()
+            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            HCStatus = (str(DateNow) + str(" , HC: 0L\n"))
+            count0 = 0
+            flow_Calib = 0
+            uart.write(str(HCStatus))
+        if value == "V1r" or value =="V1R":
+            now = utime.localtime()
+            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            H1Status = (str(DateNow) + str(" , H1: 0L\n"))
+            count1 = 0
+            flow1 = 0
+            uart.write(str(H1Status))
+        if value == "V2r" or value =="V2R":
+            now = utime.localtime()
+            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            H2Status = (str(DateNow) + str(" , H2: 0L\n"))
+            count2 = 0
+            flow2 = 0
+            uart.write(str(H2Status))
+        if value == "V3r" or value =="V3R":
+            now = utime.localtime()
+            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            H3Status = (str(DateNow) + str(" , H3: 0L\n"))
+            count3 = 0
+            flow3 = 0
+            uart.write(str(H3Status))
+        if value == "V4r" or value =="V4R":
+            now = utime.localtime()
+            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+            H4Status = (str(DateNow) + str(" , H4: 0L\n"))
+            count4 = 0
+            flow4 = 0
+            uart.write(str(H4Status))
         if value == "Vt" or value =="VT":
             reading = TempSensor.read_u16() * conversion_factor
             temperature = round((27 - (reading - 0.706)/0.001721),2)

@@ -529,32 +529,7 @@ def Valve(dir):
 	while not str(value):
 		value = ser.readline()
 	return value
-		
-#def Valve(dir):
-#        now = datetime.now()
-#        now = now.strftime("%Y-%m-%d %H:%M:%S")
-#        OnOff = GPIO.input(5)
-#        ValveD = GPIO.input(6)
-#        if dir != ValveD:
-#		LogString="3Way Valve: Moving to bed " + str(dir)
-#                LogString=str(LogString)
-#                syslog.syslog(syslog.LOG_INFO,LogString)
-#                if ValveD:
-#                        GPIO.output(5, GPIO.LOW)
-#                        GPIO.output(6, GPIO.LOW)
-#                        t_end = time.time() + 13
-#                        while time.time() < t_end:
-#				DataWrite()
-#                        GPIO.output(5, GPIO.HIGH)
-#                        DataWrite()
-#                if not ValveD:
-#                        GPIO.output(5, GPIO.LOW)
-#                        GPIO.output(6, GPIO.HIGH)
-#                        t_end = time.time() + 13
-#                        while time.time() < t_end:
-#				DataWrite()
-#                        GPIO.output(5, GPIO.HIGH)
-#			DataWrite()
+
 			
 def Display():
 	global Sensor

@@ -1,0 +1,34 @@
+!# /bin/bash
+clear
+
+STAT=$(Valve s)
+sleep 0.2
+CSTAT=$(Valve cs)
+sleep 0.2
+V1STAT=$(Valve 1s)
+sleep 0.2
+V2STAT=$(Valve 2s)
+sleep 0.2
+V3STAT=$(Valve 3s)
+sleep 0.2
+V4STAT=$(Valve 4s)
+pH=$(pH )
+EC=$(EC )
+Temp=$(Temp )
+RH=$(RH )
+echo $STAT
+echo $CSTAT
+echo $V1STAT
+echo $V2STAT
+echo $V3STAT
+echo $V4STAT
+echo $VC
+echo $V1
+echo $V2
+echo $V3
+echo $V4
+echo $Temp
+echo $RH
+echo ""
+echo $pH
+echo $EC

@@ -62,7 +62,10 @@ try:
 #	print "Total Disolved Solids: ", TDS    #500-600 ppm clones/seedlings, 800-900 veg 1000-1100 flo, flush 400-500
 #	print "Salinity: ", Salt		#~=0.5
 #	print "Specific Gravity: ", SG		
-	print Con, TDS, Salt, SG
+	print "EC: ", Con
+	print "TDS: ",TDS
+	print "Salt: ", Salt
+	print "S. grav: ",SG
 except ValueError: 
 #	print "ValueError"
 	pass

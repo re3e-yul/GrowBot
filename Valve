@@ -24,15 +24,23 @@ else:
 		if argnum > 3:
 			value = 0
 		else:
-			value = str(sys.argv[1])
-		ser.write("V%s \n"%(value ))
-		while 1:
+			userIn = str(sys.argv[1])
+		ser.write("V%s \n"%(userIn ))
+		value = ""
+		while not value:
 			try:
 				value = str(ser.readline().strip())
 				value = value.strip("'b'")
-       				if value:
-					itt = itt + 1
+				if value:
 					print value
-#					sys.exit()
+					if userIn == "q":
+						while True:
+							value = str(ser.readline().strip())
+			                                value = value.strip("'b'")
+							print value
+							if value == ".................................................":
+								time.sleep(0.5)
+								ser.write("Vs")
+								sys.exit()
 			except serial.serialutil.SerialException:
 				pass
