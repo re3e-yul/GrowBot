@@ -38,7 +38,7 @@ else:
 							value = str(ser.readline().strip())
 			                                value = value.strip("'b'")
 							print value
-							if value == ".................................................":
+							if value == "...................................................":
 								time.sleep(0.5)
 								ser.write("Vs")
 								sys.exit()

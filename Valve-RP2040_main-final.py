@@ -55,6 +55,7 @@ print(os.uname())
 
 
 def Hall_handler0(pin):
+    SerRead()
     global count0
     global count1
     global count2
@@ -88,9 +89,9 @@ def Hall_handler0(pin):
             ReStr = ""
             led.toggle()
             return (HCStatus)
-            
 
 def Hall_handler1(pin):
+    SerRead()
     global count0
     global count1
     global count2
@@ -126,6 +127,7 @@ def Hall_handler1(pin):
             return (H1Status)
 
 def Hall_handler2(pin):
+    SerRead()
     global count0
     global count1
     global count2
@@ -161,6 +163,7 @@ def Hall_handler2(pin):
             return (H2Status)
             
 def Hall_handler3(pin):
+    SerRead()
     global count0
     global count1
     global count2
@@ -200,9 +203,9 @@ def Hall_handler3(pin):
             #utime.sleep(0.7)
             H3Status = str(ReStr2)
             return (H3Status)
-            
-            
+
 def Hall_handler4(pin):
+    SerRead()
     global count0
     global count1
     global count2
@@ -242,6 +245,235 @@ def Hall_handler4(pin):
             H4Status = str(ReStr2)
             return (H4Status)
 
+def SerRead():
+    HCStatus = ""
+    H1Status = ""
+    H2Status = ""
+    H3Status = ""
+    H4Status = ""
+    H5Status = ""
+    Status = ""
+    while uart.any():
+        led.on()
+        value = (str(uart.readline().strip()))
+        value = value.strip("'b'")
+        # print ("Value :", value)
+        # uart.write(value)
+        # utime.sleep(0.2)
+        now = utime.localtime()
+        print(str(now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(
+            now[5]) + str("   ") + str(value))
+        if value == "V0":
+            print("Value :", value)
+            relay1.value(1)
+            relay2.value(1)
+            relay3.value(1)
+            led.off()
+            utime.sleep(0.9)
+            uart.write("V0")
+            print("")
+            print('relay1: ' + str(not relay1.value()))
+            print('relay2: ' + str(not relay2.value()))
+            print('relay3: ' + str(not relay3.value()))
+
+        if value == "Vc" or value == "VC":
+            print("Value :", value)
+            relay1.value(0)
+            relay2.value(1)
+            relay3.value(1)
+            led.off()
+            t_end = utime.time() + 10
+            while utime.time() < t_end:
+                utime.sleep(0.3)
+                led.on()
+                utime.sleep(0.3)
+                led.off()
+                # utime.sleep(1)
+            uart.write("VC")
+            Status = value
+            print("")
+            print('relay1: ' + str(not relay1.value()))
+            print('relay2: ' + str(not relay2.value()))
+            print('relay3: ' + str(not relay3.value()))
+
+        if value == "V1":
+            print("Value :", value)
+            relay1.value(0)
+            relay2.value(0)
+            relay3.value(0)
+            led.off()
+            t_end = utime.time() + 13
+            while utime.time() < t_end:
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.off()
+                # utime.sleep(1)
+            uart.write("V1")
+            Status = value
+            print("")
+            print('relay1: ' + str(not relay1.value()))
+            print('relay2: ' + str(not relay2.value()))
+            print('relay3: ' + str(not relay3.value()))
+
+        if value == "V2":
+            print("Value :", value)
+            led.off()
+            relay1.value(0)
+            relay2.value(0)
+            relay3.value(1)
+            t_end = utime.time() + 13
+            while utime.time() < t_end:
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.toggle()
+                utime.sleep(0.3)
+                led.off()
+                utime.sleep(1)
+            uart.write("V2")
+            Status = value
+            # print ("")
+            # print ('relay1: ' + str(not relay1.value()))
+            # print ('relay2: ' + str(not relay2.value()))
+            # print ('relay3: ' + str(not relay3.value()))
+
+        if value == "Vs" or value == "VS":
+            if not relay1.value():
+                if  Status:
+                    Status_str = "Valve Status: " + str(Status) + "-On\n"
+                else:
+                    Status_str = "Valve Status: On\n"
+            else:
+                if Status:
+                    Status_str = "Valve Status: " + str(Status) + "-Off\n"
+                else:
+                    Status_str = "Valve Status: Off\n"
+            uart.write(str(Status_str))
+        if value == "Vcs" or value == "VCS":
+            if not HCStatus:
+                now = utime.localtime()
+                DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                    now[4]) + ":" + str(now[5]))
+                HCStatus = str("0\n")
+            else:
+                print("Calib Status: ", HCStatus)
+                # HCStatuss = str("Hall1 Status: ") + HCStatus.strip("'b'") + str("\n")
+                HCStatus.strip("'b'") + str("\n")
+            uart.write(str(HCStatus))
+
+        if value == "V1s" or value == "V1S":
+            if not H1Status:
+                now = utime.localtime()
+                DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                    now[4]) + ":" + str(now[5]))
+                H1Status = str("0\n")
+            else:
+                # print ("Bed1 Status: ",H2Status)
+                # H2Statuss = str("Bed1 Status: ") + H2Status.strip("'b'") + str("\n")
+                H1Status = H1Status.strip("'b'") + str("\n")
+            uart.write(str(H1Status))
+
+        if value == "V2s" or value == "V2S":
+            if not H2Status:
+                now = utime.localtime()
+                DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
+                H2Status = str("0\n")
+            else:
+                # print ("Bed2 Status: ",H2Status)
+                # H2Statuss = str("Bed2 Status: ") + H2Status.strip("'b'") + str("\n")
+                H2Status = H2Status.strip("'b'") + str("\n")
+            uart.write(str(H2Status))
+
+        if value == "V3s" or value == "V3S":
+            if not H3Status:
+                now = utime.localtime()
+                DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                    now[4]) + ":" + str(now[5]))
+                H3Status = str("0\n")
+            else:
+                print("Bed1 Status: ", H3Status)
+                # H4Statuss = str("Bed1 Status: ") + H4Status.strip("'b'") + str("\n")
+                H3Status = H3Status.strip("'b'") + str("\n")
+            uart.write(str(H3Status))
+
+        if value == "V4s" or value == "V4S":
+            if not H4Status:
+                now = utime.localtime()
+                DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                    now[4]) + ":" + str(now[5]))
+                H4Status = str("0\n")
+            else:
+                # print ("Bed2 Status: ",H4Status)
+                # H5Statuss = str("Bed2 Status: ") + H4Status.strip("'b'") + str("\n")
+                H4Status = H4Status.strip("'b'") + str("\n")
+            uart.write(str(H4Status))
+
+        if value == "Vcr" or value == "VCR":
+            now = utime.localtime()
+            DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                now[4]) + ":" + str(now[5]))
+            HCStatus = str("0\n")
+            count0 = 0
+            flow_Calib = 0
+            uart.write(str(HCStatus))
+        if value == "V1r" or value == "V1R":
+            now = utime.localtime()
+            DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                now[4]) + ":" + str(now[5]))
+            H1Status = str("0\n")
+            count1 = 0
+            flow1 = 0
+            uart.write(str(H1Status))
+        if value == "V2r" or value == "V2R":
+            now = utime.localtime()
+            DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                now[4]) + ":" + str(now[5]))
+            H2Status = str("0\n")
+            count2 = 0
+            flow2 = 0
+            uart.write(str(H2Status))
+        if value == "V3r" or value == "V3R":
+            now = utime.localtime()
+            DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                now[4]) + ":" + str(now[5]))
+            H3Status = str("0\n")
+            count3 = 0
+            flow3 = 0
+            uart.write(str(H3Status))
+        if value == "V4r" or value == "V4R":
+            now = utime.localtime()
+            DateNow = (str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(
+                now[4]) + ":" + str(now[5]))
+            H4Status = str("0\n")
+            count4 = 0
+            flow4 = 0
+            uart.write(str(H4Status))
+        if value == "Vt" or value == "VT":
+            reading = TempSensor.read_u16() * conversion_factor
+            temperature = round((27 - (reading - 0.706) / 0.001721), 2)
+            temperature = str(temperature)  # + "C"
+            print(temperature)
+            uart.write(temperature)
+
+        if value == "Vq" or value == "VQ":
+            print("Exit")
+            uart.write("Killing myself")
+            utime.sleep(1.5)
+            machine.reset()
+
+
+
 Hall_Calibration.irq(trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING, handler=Hall_handler0)
 Hall_Pump_Bed1.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler1)
 Hall_Pump_Bed2.irq(trigger=machine.Pin.IRQ_RISING, handler=Hall_handler2)
@@ -265,217 +497,10 @@ relay2.value(1)
 relay3.value(1)
 while 1:
     led.toggle()
-    #print ("hi")
-    #uart.write("Hello my name is ....\n")
-    
-    while uart.any():
-        led.on()
-        value = (str(uart.readline().strip()))
-        value = value.strip("'b'")
-        #print ("Value :", value)
-        #uart.write(value)
-        #utime.sleep(0.2)
-        now = utime.localtime()
-        print (str(now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]) + str ("   ") + str(value))
-        if value == "V0":
-            print ("Value :", value)
-            relay1.value(1)
-            relay2.value(1)
-            relay3.value(1)
-            led.off()
-            utime.sleep(0.9)
-            uart.write("V0")
-            print ("")
-            print ('relay1: ' + str(not relay1.value()))
-            print ('relay2: ' + str(not relay2.value()))
-            print ('relay3: ' + str(not relay3.value()))
-             
-        if value == "Vc" or value == "VC":
-            print ("Value :", value)
-            relay1.value(0)
-            relay2.value(1)
-            relay3.value(1)
-            led.off()
-            t_end = utime.time() + 10
-            while utime.time() < t_end:
-                utime.sleep(0.3)
-                led.on()
-                utime.sleep(0.3)
-                led.off()
-                #utime.sleep(1)
-            uart.write("VC")
-            Status = value
-            print ("")
-            print ('relay1: ' + str(not relay1.value()))
-            print ('relay2: ' + str(not relay2.value()))
-            print ('relay3: ' + str(not relay3.value()))
-            
-        if value == "V1":
-            print ("Value :", value)
-            relay1.value(0)
-            relay2.value(0)
-            relay3.value(1)
-            led.off()
-            t_end = utime.time() + 13
-            while utime.time() < t_end:
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.off()
-                #utime.sleep(1)
-            uart.write("V1")
-            Status = value
-            print ("")
-            print ('relay1: ' + str(not relay1.value()))
-            print ('relay2: ' + str(not relay2.value()))
-            print ('relay3: ' + str(not relay3.value()))
-            
-        if value == "V2":
-            print ("Value :", value)
-            led.off()
-            relay1.value(0)
-            relay2.value(0)
-            relay3.value(0)
-            t_end = utime.time() + 13
-            while utime.time() < t_end:
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.toggle()
-                utime.sleep(0.3)
-                led.off()
-                utime.sleep(1)
-            uart.write("V2")
-            Status = value
-            #print ("")
-            #print ('relay1: ' + str(not relay1.value()))
-            #print ('relay2: ' + str(not relay2.value()))
-            #print ('relay3: ' + str(not relay3.value()))
-        
-        if value == "Vs" or value =="VS":
-            if not relay1.value():
-                if Status:
-                    Status_str = "Valve Status: " + str(Status) + "-On\n"
-                else:
-                    Status_str = "Valve Status: On\n"
-            else:
-                if Status:
-                    Status_str = "Valve Status: " + str(Status) + "-Off\n"
-                else:
-                    Status_str = "Valve Status: Off\n"
-            uart.write(str(Status_str))
-        if value == "Vcs" or value =="VCS":
-            if not HCStatus:
-                now = utime.localtime()
-                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-                HCStatus = (str(DateNow) + str(" , HC: 0L\n"))
-            else:
-                print ("Calib Status: ",HCStatus)
-                #HCStatuss = str("Hall1 Status: ") + HCStatus.strip("'b'") + str("\n")
-                HCStatus.strip("'b'") + str("\n")
-            uart.write(str(HCStatus))
-            
-        if value == "V1s" or value =="V1S":
-            if not H1Status:
-                now = utime.localtime()
-                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-                H1Status = (str(DateNow) + str(" , H1: 0L\n"))
-            else:
-                #print ("Bed1 Status: ",H2Status)
-                #H2Statuss = str("Bed1 Status: ") + H2Status.strip("'b'") + str("\n")
-                H1Status = H1Status.strip("'b'") + str("\n")
-            uart.write(str(H1Status))
-            
-        if value == "V2s" or value =="V2S":
-            if not H2Status:
-                now = utime.localtime()
-                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-                H2Status = (str(DateNow) + str(" , H2: 0L\n"))
-            else:
-                #print ("Bed2 Status: ",H2Status)
-                #H2Statuss = str("Bed2 Status: ") + H2Status.strip("'b'") + str("\n")
-                H2Status = H2Status.strip("'b'") + str("\n")
-            uart.write(str(H2Status))
-            
-        if value == "V3s" or value =="V3S":
-            if not H3Status:
-                now = utime.localtime()
-                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-                H3Status = (str(DateNow) + str(" , H3: 0L\n"))
-            else:
-                print ("Bed1 Status: ",H3Status)
-                #H4Statuss = str("Bed1 Status: ") + H4Status.strip("'b'") + str("\n")
-                H3Status = H3Status.strip("'b'") + str("\n")
-            uart.write(str(H3Status))
-        
-        if value == "V4s" or value =="V4S":
-            if not H4Status:
-                now = utime.localtime()
-                DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-                H4Status = (str(DateNow) + str(" , H4: 0L\n"))
-            else:
-                #print ("Bed2 Status: ",H4Status)
-                #H5Statuss = str("Bed2 Status: ") + H4Status.strip("'b'") + str("\n")
-                H4Status = H4Status.strip("'b'") + str("\n")
-            uart.write(str(H4Status))
-            
-        if value == "Vcr" or value =="VCR":
-            now = utime.localtime()
-            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            HCStatus = (str(DateNow) + str(" , HC: 0L\n"))
-            count0 = 0
-            flow_Calib = 0
-            uart.write(str(HCStatus))
-        if value == "V1r" or value =="V1R":
-            now = utime.localtime()
-            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            H1Status = (str(DateNow) + str(" , H1: 0L\n"))
-            count1 = 0
-            flow1 = 0
-            uart.write(str(H1Status))
-        if value == "V2r" or value =="V2R":
-            now = utime.localtime()
-            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            H2Status = (str(DateNow) + str(" , H2: 0L\n"))
-            count2 = 0
-            flow2 = 0
-            uart.write(str(H2Status))
-        if value == "V3r" or value =="V3R":
-            now = utime.localtime()
-            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            H3Status = (str(DateNow) + str(" , H3: 0L\n"))
-            count3 = 0
-            flow3 = 0
-            uart.write(str(H3Status))
-        if value == "V4r" or value =="V4R":
-            now = utime.localtime()
-            DateNow = ( str(+ now[2]) + '-' + str(now[1]) + '-' + str(now[0]) + " " + str(now[3]) + ":" + str(now[4]) + ":" + str(now[5]))
-            H4Status = (str(DateNow) + str(" , H4: 0L\n"))
-            count4 = 0
-            flow4 = 0
-            uart.write(str(H4Status))
-        if value == "Vt" or value =="VT":
-            reading = TempSensor.read_u16() * conversion_factor
-            temperature = round((27 - (reading - 0.706)/0.001721),2)
-            temperature = str(temperature) # + "C"
-            print(temperature)
-            uart.write(temperature)
-            
-        if value == "Vq" or value =="VQ":
-            print ("Exit")
-            uart.write("Killing myself")
-            utime.sleep(1.5)
-            machine.reset()
+    SerRead()
+
+
+
         
     
         

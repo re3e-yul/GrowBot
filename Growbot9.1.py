@@ -281,7 +281,7 @@ def Flood():
 			time.sleep(0.7)
 		GPIO.output(26, GPIO.HIGH)
 		GPIO.output(21, GPIO.LOW)
-		Valve("2")
+		#Valve("2")
 		Valve("0")
 		while not isinstance(H3Stat, float):
 			try:
@@ -292,6 +292,7 @@ def Flood():
 		VD = dbRead('VolDrain')
 		OVBed1 = VD[9]
 		BedVol1 = H1Stat - H3Stat
+		print(round(BedVol1, 2), OVBed1)
 		while round(BedVol1, 2) != OVBed1:
 			now = datetime.now()
 			now = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -316,8 +317,8 @@ def Flood():
 			LogString = str(LogString)
 			syslog.syslog(syslog.LOG_INFO, LogString)
 			time.sleep(0.7)
-
-		sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
+		time.sleep(1)
+		sql = "INSERT INTO Farm.VolDrain (date,DH1,Hall1,DH2,Hall2,DH3,Hall3,DH4,Hall4,VolBed1,VolBed2) VALUES (%s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s)"
 		data = (now, now, "0", HD2, h2, HD3, "0", HD4, h4, "0", flow4)
 		DV.execute(sql, data)
 		DV.close
@@ -334,8 +335,15 @@ def Flood():
 		SheD.close
 		Farm.commit()
 		Farm.close
+		time.sleep(0.5)
 		Valve("1r")
 		Valve("3r")
+	else:
+		if not PStatus:
+			Valve("1r")
+			Valve("2r")
+			Valve("3r")
+			Valve("4r")
 
 
 def Valve(dir):

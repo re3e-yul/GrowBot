@@ -1,0 +1,26 @@
+#! /bin/bash
+
+Pump
+while true
+do
+	while [ ! $V1 ]
+	do
+		V1=$(Valve 1s | awk -F' ' '{print $5 }')
+		echo $V1
+		sleep 0.5
+	done
+	while [ ! $V3 ]
+	do
+		echo $V3
+		V3=$(Valve 3s | awk -F' ' '{print $5}')
+		sleep 0.5
+	done
+	clear
+	if [ ! $V3 ] || [ $V3 ='0' ]
+	then 
+		echo $V1
+	else
+		echo $V3
+	fi
+	sleep 3
+done
